@@ -17,4 +17,4 @@ class RunSerializer(serializers.ModelSerializer):
         """Настройка сериализатора: использует модель Run и включает все поля."""
 
         model = Run
-        fields = ("created_at", "athlete", "comment")
+        fields = ("id", "created_at", "athlete", "comment")
