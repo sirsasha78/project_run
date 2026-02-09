@@ -33,7 +33,7 @@ class RunSerializer(serializers.ModelSerializer):
             данных спортсмена. Доступен только для чтения и автоматически
             заполняется данными связанного объекта Athlete."""
 
-    athlete_data = AthleteSerializer(read_only=True)
+    athlete_data = AthleteSerializer(source="athlete", read_only=True)
 
     class Meta:
         """Метакласс сериализатора RunSerializer.
