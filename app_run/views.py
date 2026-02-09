@@ -1,6 +1,7 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.request import Request
+from rest_framework.filters import SearchFilter
 from rest_framework import viewsets
 from rest_framework import status
 from django.contrib.auth.models import User
@@ -54,10 +55,15 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
     Атрибуты:
         queryset (QuerySet): Базовый набор объектов User, исключающий суперпользователей.
         serializer_class (Serializer): Сериализатор, используемый для преобразования объектов User в JSON.
+        filter_backends (list): Список классов фильтрации, применяемых к набору запросов.
+            В данном случае используется поиск по полям имени и фамилии.
+        search_fields (list): Поля модели User, по которым осуществляется поиск при наличии параметра `search` в запросе.
     """
 
     queryset = User.objects.all().exclude(is_superuser=True)
     serializer_class = UserSerializer
+    filter_backends = [SearchFilter]
+    search_fields = ["first_name", "last_name"]
 
     def get_queryset(self) -> QuerySet[User]:
         """Возвращает отфильтрованный набор пользователей в зависимости от параметра 'type' в GET-запросе.
