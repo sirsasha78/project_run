@@ -6,7 +6,17 @@ class Run(models.Model):
     """Модель для хранения информации о забеге атлета.
     Представляет собой запись о тренировочном или соревновательном забеге,
     связанную с конкретным пользователем (атлетом). Содержит дату и время начала
-    забега, ссылку на пользователя и комментарий."""
+    забега, ссылку на пользователя, статус забега и комментарий."""
+
+    RUN_STATUS_INIT = "init"
+    RUN_STATUS_IN_PROGRESS = "in_progress"
+    RUN_STATUS_FINISHED = "finished"
+
+    STATUS_CHOICES = (
+        ("init", "Забег инициализирован"),
+        ("in_progress", "Забег начат"),
+        ("finished", "Забег закончен"),
+    )
 
     created_at = models.DateTimeField(
         auto_now_add=True,
@@ -24,6 +34,14 @@ class Run(models.Model):
         null=True,
         verbose_name="Комментарий",
         help_text="Дополнительная информация о забеге: состояние, погода, настроение и т.д.",
+    )
+    status = models.CharField(
+        max_length=11,
+        choices=STATUS_CHOICES,
+        db_index=True,
+        default=RUN_STATUS_INIT,
+        verbose_name="Статус забега",
+        help_text="Текущий статус забега: инициализация, в процессе, завершён.",
     )
 
     class Meta:
