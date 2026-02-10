@@ -105,8 +105,36 @@ class StartView(APIView):
         if run.status == Run.RUN_STATUS_INIT:
             run.status = Run.RUN_STATUS_IN_PROGRESS
             run.save()
-            return Response({"status": "Забег начат"}, status=status.HTTP_201_CREATED)
+            return Response({"status": "Забег начат"}, status=status.HTTP_200_OK)
         return Response(
             {"message": "Забег уже начат или закончен"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+class FinishView(APIView):
+    """Представление для завершения забега.
+    Позволяет изменить статус забега с "в процессе" на "завершён".
+    Доступно по POST-запросу. Проверяет существование забега и его текущий статус."""
+
+    def post(self, request: Request, *args, **kwargs) -> Response:
+        """Обрабатывает POST-запрос на завершение забега.
+        Пытается найти забег по переданному в URL идентификатору (`run_id`).
+        Если забег не найден, возвращает статус 404.
+        Если забег уже завершён или не запущен, возвращает статус 400.
+        Если забег активен, изменяет его статус на "завершён" и сохраняет."""
+
+        try:
+            run = Run.objects.get(id=kwargs["run_id"])
+        except Run.DoesNotExist:
+            return Response(
+                {"message": "Забег не существует"}, status=status.HTTP_404_NOT_FOUND
+            )
+        if run.status == Run.RUN_STATUS_IN_PROGRESS:
+            run.status = Run.RUN_STATUS_FINISHED
+            run.save()
+            return Response({"status": "Забег закончен"}, status=status.HTTP_200_OK)
+        return Response(
+            {"message": "Забег не запущен или закончен"},
             status=status.HTTP_400_BAD_REQUEST,
         )
