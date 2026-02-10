@@ -1,7 +1,8 @@
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.request import Request
-from rest_framework.filters import SearchFilter
+from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.views import APIView
 from rest_framework import viewsets
 from rest_framework import status
@@ -11,6 +12,7 @@ from django.conf import settings
 
 from app_run.models import Run
 from app_run.serializers import RunSerializer, UserSerializer
+from app_run.paginations import CustomPagination
 
 
 @api_view(["GET"])
@@ -43,10 +45,22 @@ class RunViewSet(viewsets.ModelViewSet):
         serializer_class (Serializer): Класс сериализатора, используемый для преобразования
             объектов модели Run в формат JSON и обратно. Определяет поля, которые будут
             включены в API-ответы и как данные будут валидироваться при создании/обновлении.
+        pagination_class (Pagination): Класс пагинации CustomPagination, обеспечивающий
+                                       постраничный вывод результатов.
+        filter_backends (list): Список бэкендов фильтрации, используемых для обработки
+            параметров фильтрации и сортировки в запросах.
+        filterset_fields (list): Поля модели, по которым доступна точная фильтрация
+            через параметры URL (например, ?status=completed&athlete=1).
+        ordering_fields (list): Поля, по которым разрешена сортировка результатов
+            через параметр ordering (например, ?ordering=created_at).
     """
 
     queryset = Run.objects.all().select_related("athlete")
     serializer_class = RunSerializer
+    pagination_class = CustomPagination
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ["status", "athlete"]
+    ordering_fields = ["created_at"]
 
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
@@ -56,15 +70,21 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
     Атрибуты:
         queryset (QuerySet): Базовый набор объектов User, исключающий суперпользователей.
         serializer_class (Serializer): Сериализатор, используемый для преобразования объектов User в JSON.
+        pagination_class (Pagination): Класс пагинации CustomPagination, обеспечивающий
+                                       постраничный вывод результатов.
         filter_backends (list): Список классов фильтрации, применяемых к набору запросов.
             В данном случае используется поиск по полям имени и фамилии.
         search_fields (list): Поля модели User, по которым осуществляется поиск при наличии параметра `search` в запросе.
+        ordering_fields (list): Поля модели User, по которым разрешена сортировка
+                                через параметр `ordering` в URL. Доступна сортировка по дате регистрации.
     """
 
     queryset = User.objects.all().exclude(is_superuser=True)
     serializer_class = UserSerializer
-    filter_backends = [SearchFilter]
+    pagination_class = CustomPagination
+    filter_backends = [SearchFilter, OrderingFilter]
     search_fields = ["first_name", "last_name"]
+    ordering_fields = ["date_joined"]
 
     def get_queryset(self) -> QuerySet[User]:
         """Возвращает отфильтрованный набор пользователей в зависимости от параметра 'type' в GET-запросе.
