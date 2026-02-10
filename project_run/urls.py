@@ -22,7 +22,7 @@ from django.conf import settings
 from rest_framework.routers import DefaultRouter
 from debug_toolbar.toolbar import debug_toolbar_urls
 
-from app_run.views import company_details, RunViewSet, UserViewSet
+from app_run.views import company_details, RunViewSet, UserViewSet, StartView
 
 
 router = DefaultRouter()
@@ -33,6 +33,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/company_details/", company_details),
     path("api/", include(router.urls)),
+    path("api/runs/<int:run_id>/start/", StartView.as_view(), name="start-run"),
 ]
 
 

@@ -2,6 +2,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework.filters import SearchFilter
+from rest_framework.views import APIView
 from rest_framework import viewsets
 from rest_framework import status
 from django.contrib.auth.models import User
@@ -80,3 +81,32 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
         elif users_type == "athlete":
             return users.filter(is_staff=False)
         return users
+
+
+class StartView(APIView):
+    """Представление для старта забега.
+    Позволяет изменить статус забега с 'инициализирован' на 'в процессе',
+    если забег существует и его текущий статус позволяет начать."""
+
+    def post(self, request: Request, *args, **kwargs) -> Response:
+        """Обрабатывает POST-запрос на старт забега.
+        Пытается найти забег по переданному в URL идентификатору (run_id).
+        Если забег не найден, возвращает ошибку 404.
+        Если статус забега — 'инициализирован' (INIT), изменяет его на 'в процессе' (IN_PROGRESS)
+        и сохраняет. В случае успеха возвращает сообщение об успешном старте.
+        Если забег уже начат или завершён, возвращает ошибку 400."""
+
+        try:
+            run = Run.objects.get(id=kwargs["run_id"])
+        except Run.DoesNotExist:
+            return Response(
+                {"message": "Забег не существует"}, status=status.HTTP_404_NOT_FOUND
+            )
+        if run.status == Run.RUN_STATUS_INIT:
+            run.status = Run.RUN_STATUS_IN_PROGRESS
+            run.save()
+            return Response({"status": "Забег начат"}, status=status.HTTP_201_CREATED)
+        return Response(
+            {"message": "Забег уже начат или закончен"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
