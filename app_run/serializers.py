@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 
-from app_run.models import Run
+from app_run.models import Run, AthleteInfo
 
 
 class AthleteSerializer(serializers.ModelSerializer):
@@ -89,3 +89,20 @@ class UserSerializer(serializers.ModelSerializer):
 
         runs = obj.runs.filter(status="finished").count()
         return runs
+
+
+class AthleteInfoSerializer(serializers.ModelSerializer):
+    """Сериализатор для модели AthleteInfo.
+    Преобразует данные модели AthleteInfo в формат JSON и обратно.
+    Включает в себя информацию о целях, весе спортсмена и идентификаторе связанного пользователя.
+    Атрибуты:
+        user_id (IntegerField): Поле, содержащее идентификатор пользователя-спортсмена.
+                                Получается из поля `id` связанного объекта `athlete`."""
+
+    user_id = serializers.ReadOnlyField(source="athlete.id")
+
+    class Meta:
+        """Метакласс сериализатора, определяющий модель и поля для сериализации."""
+
+        model = AthleteInfo
+        fields = ("goals", "weight", "user_id")
