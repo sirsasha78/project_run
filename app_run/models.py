@@ -58,3 +58,34 @@ class Run(models.Model):
         """Возвращает строковое представление объекта забега."""
 
         return f"Забег - {self.created_at} - {self.athlete.username}"
+
+
+class AthleteInfo(models.Model):
+    """Модель для хранения информации о спортсмене.
+    Содержит данные о целях, весе и пользователе-спортсмене. Каждый пользователь
+    может иметь только одну запись с информацией о себе как об атлете."""
+
+    goals = models.CharField(
+        max_length=255, verbose_name="Цели", help_text="Описание целей спортсмена."
+    )
+    weight = models.IntegerField(
+        verbose_name="Вес", help_text="Текущий вес спортсмена в килограммах."
+    )
+    athlete = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="athlete_info",
+        verbose_name="Атлет",
+        help_text="Связанный пользователь, представляющий атлета.",
+    )
+
+    class Meta:
+        """Метакласс модели AthleteInfo."""
+
+        verbose_name = "Информация о спортсмене"
+        verbose_name_plural = "Информация о спортсменах"
+
+    def __str__(self) -> str:
+        """Возвращает строковое представление объекта AthleteInfo."""
+
+        return f"Информация о спортсмене - {self.athlete.username}"
