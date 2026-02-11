@@ -28,6 +28,7 @@ class Run(models.Model):
         on_delete=models.CASCADE,
         verbose_name="Атлет",
         help_text="Пользователь, который совершил забег.",
+        related_name="runs",
     )
     comment = models.TextField(
         blank=True,

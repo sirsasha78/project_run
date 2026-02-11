@@ -45,15 +45,15 @@ class RunSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     """Сериализатор для модели User.
-    Преобразует объекты модели User в формат JSON и обратно.
-    Включает стандартные поля пользователя, а также вычисляемое поле `type`,
-    которое определяет тип пользователя на основе его прав доступа:
-    - 'coach' — если пользователь имеет статус персонала (is_staff=True),
-    - 'athlete' — для всех остальных пользователей.
+    Преобразует объекты модели User в формат JSON и обратно. Включает стандартные поля пользователя,
+    а также вычисляемые поля:
+    - `type` — определяет роль пользователя (тренер или спортсмен) на основе прав доступа;
+    - `runs_finished` — количество завершённых забегов, связанных с пользователем.
     Используется в API для предоставления информации о пользователях
     с различением по ролям без необходимости передачи служебных полей напрямую."""
 
     type = serializers.SerializerMethodField()
+    runs_finished = serializers.SerializerMethodField()
 
     class Meta:
         """Метакласс сериализатора, определяющий модель и поля для сериализации.
@@ -63,7 +63,15 @@ class UserSerializer(serializers.ModelSerializer):
                            включая вычисляемое поле `type`."""
 
         model = User
-        fields = ("id", "date_joined", "username", "last_name", "first_name", "type")
+        fields = (
+            "id",
+            "date_joined",
+            "username",
+            "last_name",
+            "first_name",
+            "type",
+            "runs_finished",
+        )
 
     def get_type(self, obj: User) -> str:
         """Возвращает тип пользователя на основе его статуса персонала.
@@ -73,3 +81,11 @@ class UserSerializer(serializers.ModelSerializer):
             obj (User): Экземпляр модели User, для которого определяется тип."""
 
         return "coach" if obj.is_staff else "athlete"
+
+    def get_runs_finished(self, obj: User) -> int:
+        """Возвращает количество завершённых забегов, связанных с пользователем.
+        Подсчитывает число объектов Run, связанных с пользователем через обратную
+        связь `runs`, у которых статус равен 'finished'."""
+
+        runs = obj.runs.filter(status="finished").count()
+        return runs
