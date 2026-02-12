@@ -11,7 +11,12 @@ from django.db.models import QuerySet
 from django.conf import settings
 
 from app_run.models import Run, AthleteInfo, Challenge
-from app_run.serializers import RunSerializer, UserSerializer, AthleteInfoSerializer
+from app_run.serializers import (
+    RunSerializer,
+    UserSerializer,
+    AthleteInfoSerializer,
+    ChallengeSerializer,
+)
 from app_run.paginations import CustomPagination
 
 
@@ -142,7 +147,10 @@ class FinishView(APIView):
         Пытается найти забег по переданному в URL идентификатору (`run_id`).
         Если забег не найден, возвращает статус 404.
         Если забег уже завершён или не запущен, возвращает статус 400.
-        Если забег активен, изменяет его статус на "завершён" и сохраняет."""
+        Если забег активен (статус "в процессе"), изменяет его статус на "завершён",
+        сохраняет изменения в базе данных и проверяет, является ли это 10-м завершённым забегом
+        для текущего пользователя. В случае достижения — создаёт новое испытание (Challenge).
+        """
 
         try:
             run = Run.objects.get(id=kwargs["run_id"])
@@ -235,3 +243,23 @@ class AthleteInfoView(APIView):
             serializer = self.serializer_class(athleteinfo)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ChallengeViewSet(viewsets.ReadOnlyModelViewSet):
+    """Набор представлений для работы с объектами Challenge (вызовы/испытания).
+    Предоставляет только чтение (список и детали) объектов модели Challenge.
+    Поддерживает фильтрацию по полю `athlete`, что позволяет получать все вызовы,
+    связанные с конкретным спортсменом.
+    Атрибуты:
+        queryset (QuerySet): Набор данных, содержащий все объекты модели Challenge.
+        serializer_class (ChallengeSerializer): Сериализатор, используемый для преобразования
+            объектов Challenge в JSON и обратно.
+        filter_backends (list): Список бэкендов фильтрации. Используется DjangoFilterBackend
+            для поддержки фильтрации через параметры запроса.
+        filterset_fields (list): Поля модели, по которым доступна фильтрация.
+            В данном случае — только поле `athlete`."""
+
+    queryset = Challenge.objects.all()
+    serializer_class = ChallengeSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["athlete"]

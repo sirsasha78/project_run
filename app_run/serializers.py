@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 
-from app_run.models import Run, AthleteInfo
+from app_run.models import Run, AthleteInfo, Challenge
 
 
 class AthleteSerializer(serializers.ModelSerializer):
@@ -117,3 +117,18 @@ class AthleteInfoSerializer(serializers.ModelSerializer):
                 "Вес должен быть больше нуля и меньше 900"
             )
         return value
+
+
+class ChallengeSerializer(serializers.ModelSerializer):
+    """Сериализатор для модели Challenge.
+    Преобразует объекты модели Challenge в формат JSON и обратно.
+    Используется для сериализации данных при выполнении операций чтения и записи
+    в API, связанных с испытаниями (challenges), включая информацию о полном имени
+    участника и связанном спортсмене.
+    """
+
+    class Meta:
+        """Метакласс сериализатора, определяющий модель и поля для сериализации."""
+
+        model = Challenge
+        fields = ("full_name", "athlete")
