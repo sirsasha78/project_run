@@ -164,7 +164,7 @@ class FinishView(APIView):
             run.save()
 
             finished_run = Run.objects.filter(
-                athlete=request.user, status=Run.RUN_STATUS_FINISHED
+                athlete=run.athlete, status=Run.RUN_STATUS_FINISHED
             ).count()
             if finished_run == 10:
                 Challenge.objects.create(
