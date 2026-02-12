@@ -10,7 +10,7 @@ from django.contrib.auth.models import User
 from django.db.models import QuerySet
 from django.conf import settings
 
-from app_run.models import Run, AthleteInfo
+from app_run.models import Run, AthleteInfo, Challenge
 from app_run.serializers import RunSerializer, UserSerializer, AthleteInfoSerializer
 from app_run.paginations import CustomPagination
 
@@ -153,6 +153,15 @@ class FinishView(APIView):
         if run.status == Run.RUN_STATUS_IN_PROGRESS:
             run.status = Run.RUN_STATUS_FINISHED
             run.save()
+
+            finished_run = Run.objects.filter(
+                athlete=request.user, status=Run.RUN_STATUS_FINISHED
+            ).count()
+            if finished_run == 10:
+                Challenge.objects.create(
+                    full_name="Сделай 10 Забегов!", athlete=request.user
+                )
+
             return Response({"status": "Забег закончен"}, status=status.HTTP_200_OK)
         return Response(
             {"message": "Забег не запущен или закончен"},
