@@ -159,12 +159,6 @@ class FinishView(APIView):
                 {"message": "Забег не существует"}, status=status.HTTP_404_NOT_FOUND
             )
 
-        if not request.user.is_authenticated:
-            return Response(
-                {"message": "Требуется аутентификация"},
-                status=status.HTTP_401_UNAUTHORIZED,
-            )
-
         if run.status == Run.RUN_STATUS_IN_PROGRESS:
             run.status = Run.RUN_STATUS_FINISHED
             run.save()
@@ -174,7 +168,7 @@ class FinishView(APIView):
             ).count()
             if finished_run == 10:
                 Challenge.objects.create(
-                    full_name="Сделай 10 Забегов!", athlete=request.user.id
+                    full_name="Сделай 10 Забегов!", athlete=run.athlete
                 )
 
             return Response({"status": "Забег закончен"}, status=status.HTTP_200_OK)
