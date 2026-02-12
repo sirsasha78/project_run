@@ -7,6 +7,7 @@ from app_run.views import (
     UserViewSet,
     StartView,
     FinishView,
+    AthleteInfoView,
 )
 
 
@@ -19,6 +20,7 @@ urlpatterns = [
     path("company_details/", company_details, name="company-details"),
     path("runs/<int:run_id>/start/", StartView.as_view(), name="start-run"),
     path("runs/<int:run_id>/stop/", FinishView.as_view(), name="stop-run"),
+    path("athlete_info/<int:user_id>/", AthleteInfoView.as_view(), name="athlete-info"),
 ]
 
 urlpatterns += router.urls

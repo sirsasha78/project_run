@@ -10,8 +10,8 @@ from django.contrib.auth.models import User
 from django.db.models import QuerySet
 from django.conf import settings
 
-from app_run.models import Run
-from app_run.serializers import RunSerializer, UserSerializer
+from app_run.models import Run, AthleteInfo
+from app_run.serializers import RunSerializer, UserSerializer, AthleteInfoSerializer
 from app_run.paginations import CustomPagination
 
 
@@ -158,3 +158,71 @@ class FinishView(APIView):
             {"message": "Забег не запущен или закончен"},
             status=status.HTTP_400_BAD_REQUEST,
         )
+
+
+class AthleteInfoView(APIView):
+    """Представление для управления информацией об атлете.
+    Позволяет получать и обновлять данные о пользователе-атлете, такие как цели и вес.
+    Использует сериализатор AthleteInfoSerializer для валидации и сериализации данных.
+    Доступ к данным осуществляется по идентификатору пользователя (user_id).
+    Атрибуты:
+        serializer_class (type): Класс сериализатора, используемый для преобразования
+                                 данных модели AthleteInfo в JSON и обратно."""
+
+    serializer_class = AthleteInfoSerializer
+
+    def get_object(self, user_id: int) -> User | None:
+        """Получает объект пользователя по его идентификатору.
+        Метод пытается найти пользователя в базе данных по заданному ID.
+        Если пользователь не найден, возвращает None."""
+
+        try:
+            user = User.objects.get(id=user_id)
+            return user
+        except User.DoesNotExist:
+            return None
+
+    def get(self, request: Request, *args, **kwargs) -> Response:
+        """Обрабатывает GET-запрос для получения информации об атлете.
+        Находит пользователя по user_id из URL. Если пользователь существует,
+        возвращает или создаёт объект AthleteInfo и сериализует его данные.
+        В противном случае возвращает ошибку 404."""
+
+        user = self.get_object(kwargs["user_id"])
+        if not user:
+            return Response(
+                {"message": "Пользователь не существует"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        athleteinfo, _ = AthleteInfo.objects.select_related("athlete").get_or_create(
+            athlete=user
+        )
+        serializer = self.serializer_class(athleteinfo)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request: Request, *args, **kwargs) -> Response:
+        """Обрабатывает PUT-запрос для обновления информации об атлете.
+        Находит пользователя по user_id. Если пользователь не существует,
+        возвращает ошибку 404. Обновляет или создаёт объект AthleteInfo.
+        В случае ошибки валидации возвращает соответствующее сообщение."""
+
+        user = self.get_object(kwargs["user_id"])
+        if not user:
+            return Response(
+                {"message": "Пользователь не существует"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            data = serializer.validated_data
+            athleteinfo, _ = AthleteInfo.objects.select_related(
+                "athlete"
+            ).update_or_create(
+                athlete=user,
+                defaults={"goals": data["goals"], "weight": data["weight"]},
+            )
+            serializer = self.serializer_class(athleteinfo)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

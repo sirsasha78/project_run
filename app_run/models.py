@@ -66,10 +66,19 @@ class AthleteInfo(models.Model):
     может иметь только одну запись с информацией о себе как об атлете."""
 
     goals = models.CharField(
-        max_length=255, verbose_name="Цели", help_text="Описание целей спортсмена."
+        max_length=255,
+        verbose_name="Цели",
+        blank=True,
+        null=True,
+        default=None,
+        help_text="Описание целей спортсмена.",
     )
     weight = models.IntegerField(
-        verbose_name="Вес", help_text="Текущий вес спортсмена в килограммах."
+        blank=True,
+        null=True,
+        default=None,
+        verbose_name="Вес",
+        help_text="Текущий вес спортсмена в килограммах.",
     )
     athlete = models.OneToOneField(
         User,

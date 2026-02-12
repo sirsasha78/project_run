@@ -106,3 +106,14 @@ class AthleteInfoSerializer(serializers.ModelSerializer):
 
         model = AthleteInfo
         fields = ("goals", "weight", "user_id")
+
+    def validate_weight(self, value: int) -> int:
+        """Валидатор для поля `weight`.
+        Проверяет, что значение веса находится в допустимом диапазоне:
+        больше 0 и меньше 900 кг."""
+
+        if not 0 < value < 900:
+            raise serializers.ValidationError(
+                "Вес должен быть больше нуля и меньше 900"
+            )
+        return value
