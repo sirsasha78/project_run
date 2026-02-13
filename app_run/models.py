@@ -130,3 +130,32 @@ class Challenge(models.Model):
         """Возвращает строковое представление объекта испытания."""
 
         return f"Испытание атлета {self.athlete.username}"
+
+
+class Position(models.Model):
+    """Модель для хранения географических координат участника во время забега.
+    Каждый объект модели представляет собой одну точку местоположения (широту и долготу),
+    зафиксированную в определённый момент времени в рамках конкретного забега.
+    Привязывается к участнику через связь с моделью Run."""
+
+    run = models.ForeignKey(
+        Run, on_delete=models.CASCADE, related_name="positions", verbose_name="Забег"
+    )
+    latitude = models.FloatField(
+        verbose_name="Широта", help_text="Географическая широта: от -90 до 90 градусов."
+    )
+    longitude = models.FloatField(
+        verbose_name="Долгота",
+        help_text="Географическая долгота: от -180 до 180 градусов.",
+    )
+
+    class Meta:
+        """Метаданные модели Position."""
+
+        verbose_name = "Позиция"
+        verbose_name_plural = "Позиции"
+
+    def __str__(self) -> str:
+        """Возвращает строковое представление объекта Position."""
+
+        return f"Координаты - {self.run.athlete.username}"
