@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 
-from app_run.models import Run, AthleteInfo, Challenge
+from app_run.models import Run, AthleteInfo, Challenge, Position
 
 
 class AthleteSerializer(serializers.ModelSerializer):
@@ -132,3 +132,55 @@ class ChallengeSerializer(serializers.ModelSerializer):
 
         model = Challenge
         fields = ("full_name", "athlete")
+
+
+class PositionSerializer(serializers.ModelSerializer):
+    """Сериализатор для модели Position.
+    Предназначен для сериализации и десериализации данных о позиции участника забега,
+    включая географические координаты (широту и долготу) и связь с конкретным забегом.
+    Проверяет корректность координат и статус забега перед сохранением.
+    Атрибуты:
+        id (int): Уникальный идентификатор позиции.
+        run (Run): Забег, к которому привязана позиция.
+        latitude (float): Географическая широта в диапазоне от -90 до 90 градусов.
+        longitude (float): Географическая долгота в диапазоне от -180 до 180 градусов.
+    """
+
+    class Meta:
+        """Метакласс сериализатора.
+        Определяет модель и поля, которые будут использоваться при сериализации."""
+
+        model = Position
+        fields = ("id", "run", "latitude", "longitude")
+
+    def validate_latitude(self, value: float) -> float:
+        """Валидирует значение широты.
+        Проверяет, что переданное значение находится в допустимом диапазоне:
+        от -90.0 до 90.0 градусов."""
+
+        if not -90.0 <= value <= 90.0:
+            raise serializers.ValidationError(
+                "Широта должна быть в диапазоне от -90 до 90."
+            )
+        return value
+
+    def validate_longitude(self, value: float) -> float:
+        """Валидирует значение долготы.
+        Проверяет, что переданное значение находится в допустимом диапазоне:
+        от -180.0 до 180.0 градусов."""
+
+        if not -180.0 <= value <= 180.0:
+            raise serializers.ValidationError(
+                "Долгота должна быть в диапазоне от -180 до 180."
+            )
+        return value
+
+    def validate(self, attrs: dict) -> dict:
+        """Общая валидация атрибутов сериализатора.
+        Проверяет, что забег, к которому привязывается позиция,
+        находится в статусе 'in_progress'. Сохранение позиций разрешено только
+        во время активного забега."""
+
+        if attrs["run"].status != Run.RUN_STATUS_IN_PROGRESS:
+            raise serializers.ValidationError("Забег должен быть в статусе in_progress")
+        return attrs
