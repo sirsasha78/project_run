@@ -10,12 +10,13 @@ from django.contrib.auth.models import User
 from django.db.models import QuerySet
 from django.conf import settings
 
-from app_run.models import Run, AthleteInfo, Challenge
+from app_run.models import Run, AthleteInfo, Challenge, Position
 from app_run.serializers import (
     RunSerializer,
     UserSerializer,
     AthleteInfoSerializer,
     ChallengeSerializer,
+    PositionSerializer,
 )
 from app_run.paginations import CustomPagination
 
@@ -264,3 +265,24 @@ class ChallengeViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ChallengeSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["athlete"]
+
+
+class PositionViewSet(viewsets.ModelViewSet):
+    """Набор представлений для модели Position.
+    Предоставляет полный набор операций CRUD (создание, чтение, обновление, удаление)
+    для объектов модели Position через API. Поддерживает фильтрацию по полям,
+    указанным в `filterset_fields`.
+    Атрибуты:
+        queryset (QuerySet): Набор данных, содержащий все объекты модели Position.
+        serializer_class (Serializer): Класс сериализатора, используемый для преобразования
+            объектов модели в JSON и обратно.
+        filter_backends (list): Список бэкендов фильтрации, используемых для фильтрации запросов.
+            В данном случае используется DjangoFilterBackend для поддержки фильтрации
+            на основе параметров запроса.
+        filterset_fields (list): Список полей модели, по которым разрешена фильтрация.
+            Пользователь может фильтровать объекты по полю `run`."""
+
+    queryset = Position.objects.all().select_related("run__athlete")
+    serializer_class = PositionSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["run"]

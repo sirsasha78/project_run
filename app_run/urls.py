@@ -9,6 +9,7 @@ from app_run.views import (
     FinishView,
     AthleteInfoView,
     ChallengeViewSet,
+    PositionViewSet,
 )
 
 
@@ -16,6 +17,7 @@ router = DefaultRouter()
 router.register(r"runs", RunViewSet)
 router.register(r"users", UserViewSet)
 router.register(r"challenges", ChallengeViewSet)
+router.register(r"positions", PositionViewSet)
 
 
 urlpatterns = [
