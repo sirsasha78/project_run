@@ -9,6 +9,7 @@ from rest_framework import status
 from django.contrib.auth.models import User
 from django.db.models import QuerySet
 from django.conf import settings
+from geopy.distance import geodesic
 
 from app_run.models import Run, AthleteInfo, Challenge, Position
 from app_run.serializers import (
@@ -19,6 +20,7 @@ from app_run.serializers import (
     PositionSerializer,
 )
 from app_run.paginations import CustomPagination
+from app_run.utils import calculate_run_distance
 
 
 @api_view(["GET"])
@@ -145,13 +147,13 @@ class FinishView(APIView):
 
     def post(self, request: Request, *args, **kwargs) -> Response:
         """Обрабатывает POST-запрос на завершение забега.
-        Пытается найти забег по переданному в URL идентификатору (`run_id`).
-        Если забег не найден, возвращает статус 404.
-        Если забег уже завершён или не запущен, возвращает статус 400.
-        Если забег активен (статус "в процессе"), изменяет его статус на "завершён",
-        сохраняет изменения в базе данных и проверяет, является ли это 10-м завершённым забегом
-        для текущего пользователя. В случае достижения — создаёт новое испытание (Challenge).
-        """
+        Пытается найти забег по идентификатору, переданному в URL (`run_id`).
+        Если забег не найден, возвращает HTTP 404.
+        Если забег уже завершён или не находится в статусе «в процессе», возвращает HTTP 400.
+        Если забег активен, изменяет его статус на «завершён», сохраняет объект,
+        вычисляет пройденную дистанцию на основе собранных GPS-позиций и сохраняет её.
+        Дополнительно проверяет, является ли этот забег 10-м завершённым для пользователя.
+        В случае выполнения условия — создаёт новое испытание (Challenge)."""
 
         try:
             run = Run.objects.get(id=kwargs["run_id"])
@@ -162,6 +164,10 @@ class FinishView(APIView):
 
         if run.status == Run.RUN_STATUS_IN_PROGRESS:
             run.status = Run.RUN_STATUS_FINISHED
+            run.save()
+
+            all_positions = list(Position.objects.all())
+            run.distance = calculate_run_distance(all_positions)
             run.save()
 
             finished_run = Run.objects.filter(

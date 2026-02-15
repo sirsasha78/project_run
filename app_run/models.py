@@ -44,6 +44,12 @@ class Run(models.Model):
         verbose_name="Статус забега",
         help_text="Текущий статус забега: инициализация, в процессе, завершён.",
     )
+    distance = models.FloatField(
+        blank=True,
+        default=0.0,
+        verbose_name="Дистанция",
+        help_text="Расстояние, которое пробежал атлет",
+    )
 
     class Meta:
         """Метакласс модели Run.

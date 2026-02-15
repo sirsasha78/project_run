@@ -40,7 +40,15 @@ class RunSerializer(serializers.ModelSerializer):
         Определяет модель Django и поля, которые будут сериализованы."""
 
         model = Run
-        fields = ("id", "created_at", "athlete", "comment", "status", "athlete_data")
+        fields = (
+            "id",
+            "created_at",
+            "athlete",
+            "comment",
+            "status",
+            "athlete_data",
+            "distance",
+        )
 
 
 class UserSerializer(serializers.ModelSerializer):
