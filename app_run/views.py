@@ -166,7 +166,7 @@ class FinishView(APIView):
             run.status = Run.RUN_STATUS_FINISHED
             run.save()
 
-            all_positions = list(Position.objects.all())
+            all_positions = list(run.positions.all())
             run.distance = calculate_run_distance(all_positions)
             run.save()
 
