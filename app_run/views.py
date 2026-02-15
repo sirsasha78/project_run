@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from rest_framework import viewsets
 from rest_framework import status
 from django.contrib.auth.models import User
-from django.db.models import QuerySet
+from django.db.models import QuerySet, Sum
 from django.conf import settings
 from geopy.distance import geodesic
 
@@ -21,6 +21,10 @@ from app_run.serializers import (
 )
 from app_run.paginations import CustomPagination
 from app_run.utils import calculate_run_distance
+from app_run.challenge_service import (
+    create_challenge_ten_runs,
+    create_challenge_50_kilometers,
+)
 
 
 @api_view(["GET"])
@@ -172,11 +176,10 @@ class FinishView(APIView):
 
             finished_run = Run.objects.filter(
                 athlete=run.athlete, status=Run.RUN_STATUS_FINISHED
-            ).count()
-            if finished_run == 10:
-                Challenge.objects.create(
-                    full_name="Сделай 10 Забегов!", athlete=run.athlete
-                )
+            )
+
+            create_challenge_ten_runs(run.athlete, finished_run)
+            create_challenge_50_kilometers(run.athlete, finished_run)
 
             return Response({"status": "Забег закончен"}, status=status.HTTP_200_OK)
         return Response(
