@@ -1,7 +1,9 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
+from django.db.models import QuerySet
 
 from app_run.models import Run, AthleteInfo, Challenge, Position
+from artifacts.models import CollectibleItem
 
 
 class AthleteSerializer(serializers.ModelSerializer):
@@ -71,7 +73,7 @@ class UserSerializer(serializers.ModelSerializer):
                            включая вычисляемое поле `type`."""
 
         model = User
-        fields = (
+        fields = [
             "id",
             "date_joined",
             "username",
@@ -79,7 +81,7 @@ class UserSerializer(serializers.ModelSerializer):
             "first_name",
             "type",
             "runs_finished",
-        )
+        ]
 
     def get_type(self, obj: User) -> str:
         """Возвращает тип пользователя на основе его статуса персонала.
@@ -97,6 +99,40 @@ class UserSerializer(serializers.ModelSerializer):
 
         runs = obj.runs.filter(status="finished").count()
         return runs
+
+
+class UserDetailSerializer(UserSerializer):
+    """Сериализатор для детального представления пользователя с дополнительным полем 'items'.
+    Добавляет к базовому сериализатору UserSerializer поле 'items', содержащее список
+    всех объектов, связанных с пользователем через отношение 'items'. Предназначен для
+    использования в API-представлениях, где требуется отобразить подробную информацию
+    о пользователе, включая его связанные данные.
+    Атрибуты:
+        items (serializers.SerializerMethodField): Поле, возвращающее все элементы,
+            связанные с пользователем. Заполняется с помощью метода get_items."""
+
+    items = serializers.SerializerMethodField()
+
+    class Meta(UserSerializer.Meta):
+        """Метакласс для настройки поведения сериализатора.
+        Наследует метакласс из UserSerializer и расширяет список полей,
+        добавляя поле 'items' к уже существующим полям базового сериализатора.
+        Атрибуты:
+            model (django.db.models.Model): Модель, используемая сериализатором — User.
+            fields (list): Список полей модели, подлежащих сериализации, включая
+                         унаследованные из UserSerializer и добавленное поле 'items'."""
+
+        model = User
+        fields = UserSerializer.fields + ["items"]
+
+    def get_items(self, obj: User) -> list[CollectibleItem]:
+        """Возвращает все объекты, связанные с пользователем через отношение 'items'.
+        Метод вызывается автоматически при сериализации поля 'items'.
+        Получает на вход экземпляр модели User и возвращает QuerySet всех связанных
+        с ним артефактов.
+        """
+
+        return list(obj.items.all())
 
 
 class AthleteInfoSerializer(serializers.ModelSerializer):

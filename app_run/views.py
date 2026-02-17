@@ -18,6 +18,7 @@ from app_run.serializers import (
     AthleteInfoSerializer,
     ChallengeSerializer,
     PositionSerializer,
+    UserDetailSerializer,
 )
 from app_run.paginations import CustomPagination
 from app_run.utils import calculate_run_distance
@@ -97,6 +98,21 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
     filter_backends = [SearchFilter, OrderingFilter]
     search_fields = ["first_name", "last_name"]
     ordering_fields = ["date_joined"]
+
+    def get_serializer_class(self):
+        """Определяет и возвращает класс сериализатора в зависимости от выполняемого действия.
+        Используется для разделения логики сериализации при получении списка пользователей
+        и детальной информации о пользователе.
+        Возвращаемые значения:
+            UserSerializer: Если действие — 'list' (получение списка).
+            UserDetailSerializer: Если действие — 'retrieve' (получение одного объекта).
+            Родительский класс сериализатора: Для любых других действий."""
+
+        if self.action == "list":
+            return UserSerializer
+        if self.action == "retrieve":
+            return UserDetailSerializer
+        return super().get_serializer_class()
 
     def get_queryset(self) -> QuerySet[User]:
         """Возвращает отфильтрованный набор пользователей в зависимости от параметра 'type' в GET-запросе.
