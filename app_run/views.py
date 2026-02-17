@@ -7,9 +7,9 @@ from rest_framework.views import APIView
 from rest_framework import viewsets
 from rest_framework import status
 from django.contrib.auth.models import User
-from django.db.models import QuerySet, Sum
+from django.db.models import QuerySet
 from django.conf import settings
-from geopy.distance import geodesic
+
 
 from app_run.models import Run, AthleteInfo, Challenge, Position
 from app_run.serializers import (

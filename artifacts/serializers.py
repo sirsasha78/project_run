@@ -19,7 +19,7 @@ class CollectibleItemSerializer(serializers.ModelSerializer):
         """
 
         model = CollectibleItem
-        fields = ("name", "uid", "latitude", "longitude", "picture", "value")
+        fields = ("name", "uid", "value", "latitude", "longitude", "picture")
 
     def validate_latitude(self, value: float) -> float:
         """Валидирует значение широты.

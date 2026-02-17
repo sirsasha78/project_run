@@ -18,22 +18,22 @@ class CollectibleItem(models.Model):
         verbose_name="Идентификатор",
         help_text="Уникальный строковый идентификатор артефакта.",
     )
+    value = models.IntegerField(
+        verbose_name="Значение",
+        help_text="Числовая ценность артефакта, например, в игровых очках.",
+    )
+
     latitude = models.FloatField(
-        verbose_name="Широта", help_text="Географическая широта: от -90 до 90 градусов."
+        verbose_name="Широта",
+        help_text="Географическая широта: от -90 до 90 градусов.",
     )
     longitude = models.FloatField(
         verbose_name="Долгота",
         help_text="Географическая долгота: от -180 до 180 градусов.",
     )
     picture = models.URLField(
-        verbose_name="Изображение", help_text="Прямая ссылка на изображение артефакта."
-    )
-    value = models.IntegerField(
-        blank=True,
-        null=True,
-        default=None,
-        verbose_name="Значение",
-        help_text="Числовая ценность артефакта, например, в игровых очках.",
+        verbose_name="Изображение",
+        help_text="Прямая ссылка на изображение артефакта.",
     )
 
     class Meta:
@@ -44,9 +44,6 @@ class CollectibleItem(models.Model):
         indexes = [
             models.Index(fields=["latitude", "longitude"]),
         ]
-
-    def __str__(self) -> str:
-        """Возвращает строковое представление объекта артефакта."""
 
     def __str__(self) -> str:
         """Возвращает строковое представление артефакта."""

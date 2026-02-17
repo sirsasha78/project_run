@@ -1,3 +1,6 @@
 from django.contrib import admin
 
-# Register your models here.
+from artifacts.models import CollectibleItem
+
+
+admin.site.register(CollectibleItem)
