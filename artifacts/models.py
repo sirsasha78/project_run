@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 
 class CollectibleItem(models.Model):
@@ -34,6 +35,12 @@ class CollectibleItem(models.Model):
     picture = models.URLField(
         verbose_name="Изображение",
         help_text="Прямая ссылка на изображение артефакта.",
+    )
+    items = models.ManyToManyField(
+        User,
+        related_name="items",
+        verbose_name="Награды",
+        help_text="Список собранных предметов.",
     )
 
     class Meta:
