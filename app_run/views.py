@@ -9,6 +9,7 @@ from rest_framework import status
 from django.contrib.auth.models import User
 from django.db.models import QuerySet
 from django.conf import settings
+from geopy.distance import geodesic
 
 
 from app_run.models import Run, AthleteInfo, Challenge, Position
@@ -21,11 +22,12 @@ from app_run.serializers import (
     UserDetailSerializer,
 )
 from app_run.paginations import CustomPagination
-from app_run.utils import calculate_run_distance
+from app_run.utils import calculate_run_distance, check_and_collect_artifacts
 from app_run.challenge_service import (
     create_challenge_ten_runs,
     create_challenge_50_kilometers,
 )
+from artifacts.models import CollectibleItem
 
 
 @api_view(["GET"])
@@ -99,7 +101,7 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ["first_name", "last_name"]
     ordering_fields = ["date_joined"]
 
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> UserSerializer | UserDetailSerializer:
         """Определяет и возвращает класс сериализатора в зависимости от выполняемого действия.
         Используется для разделения логики сериализации при получении списка пользователей
         и детальной информации о пользователе.
@@ -311,3 +313,20 @@ class PositionViewSet(viewsets.ModelViewSet):
     serializer_class = PositionSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["run"]
+
+    def perform_create(self, serializer: PositionSerializer) -> None:
+        """Выполняет дополнительные действия при создании новой позиции.
+        Извлекает данные из валидированного сериализатора, определяет пользователя
+        (участника забега) и координаты. Проверяет, находятся ли в указанной точке
+        какие-либо артефакты, и при наличии — зачисляет их пользователю.
+        После выполнения бизнес-логики сохраняет объект Position в базу данных.
+        Примечание:
+            Метод вызывается автоматически при успешной валидации данных
+            в процессе создания объекта через API."""
+
+        data = serializer.validated_data
+        user = data["run"].athlete
+        latitude = data["latitude"]
+        longitude = data["longitude"]
+        check_and_collect_artifacts(user, latitude, longitude)
+        serializer.save()
