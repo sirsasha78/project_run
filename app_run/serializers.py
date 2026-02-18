@@ -124,7 +124,7 @@ class UserDetailSerializer(UserSerializer):
                          унаследованные из UserSerializer и добавленное поле 'items'."""
 
         model = User
-        fields = UserSerializer.fields + ["items"]
+        fields = UserSerializer.Meta.fields + ["items"]
 
     def get_items(self, obj: User):
         """Возвращает все объекты, связанные с пользователем через отношение 'items'.
