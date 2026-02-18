@@ -154,6 +154,12 @@ class Position(models.Model):
         verbose_name="Долгота",
         help_text="Географическая долгота: от -180 до 180 градусов.",
     )
+    date_time = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Время фиксации",
+        help_text="Точная временная метка позиции, переданная трекером.",
+    )
 
     class Meta:
         """Метаданные модели Position."""

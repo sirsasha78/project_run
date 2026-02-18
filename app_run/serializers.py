@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from django.db.models import QuerySet
+from django.db.models import QuerySet, Min, Max
 
 from app_run.models import Run, AthleteInfo, Challenge, Position
 from artifacts.models import CollectibleItem
@@ -190,14 +190,19 @@ class PositionSerializer(serializers.ModelSerializer):
         run (Run): Забег, к которому привязана позиция.
         latitude (float): Географическая широта в диапазоне от -90 до 90 градусов.
         longitude (float): Географическая долгота в диапазоне от -180 до 180 градусов.
+        date_time: временная метка фиксации позиции в формате ISO 8601.
+    Поле `date_time` сериализуется в формате строки с микросекундами:
+    "ГГГГ-ММ-ДДTЧЧ:ММ:СС.мкс".
     """
+
+    date_time = serializers.DateTimeField(format="%Y-%m-%dT%H:%M:%S.%f")
 
     class Meta:
         """Метакласс сериализатора.
         Определяет модель и поля, которые будут использоваться при сериализации."""
 
         model = Position
-        fields = ("id", "run", "latitude", "longitude")
+        fields = ("id", "run", "latitude", "longitude", "date_time")
 
     def validate_latitude(self, value: float) -> float:
         """Валидирует значение широты.
