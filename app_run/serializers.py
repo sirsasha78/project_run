@@ -4,6 +4,7 @@ from django.db.models import QuerySet
 
 from app_run.models import Run, AthleteInfo, Challenge, Position
 from artifacts.models import CollectibleItem
+from artifacts.serializers import CollectibleItemSerializer
 
 
 class AthleteSerializer(serializers.ModelSerializer):
@@ -125,14 +126,15 @@ class UserDetailSerializer(UserSerializer):
         model = User
         fields = UserSerializer.fields + ["items"]
 
-    def get_items(self, obj: User) -> list[CollectibleItem]:
+    def get_items(self, obj: User):
         """Возвращает все объекты, связанные с пользователем через отношение 'items'.
         Метод вызывается автоматически при сериализации поля 'items'.
-        Получает на вход экземпляр модели User и возвращает QuerySet всех связанных
-        с ним артефактов.
+        Получает на вход экземпляр модели User и возвращает список сериализованных
+        объектов.
         """
 
-        return list(obj.items.all())
+        collected_items = list(obj.items.all())
+        return CollectibleItemSerializer(data=collected_items, many=True).data
 
 
 class AthleteInfoSerializer(serializers.ModelSerializer):
