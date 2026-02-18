@@ -94,7 +94,7 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
                                 через параметр `ordering` в URL. Доступна сортировка по дате регистрации.
     """
 
-    queryset = User.objects.all().exclude(is_superuser=True)
+    queryset = User.objects.all().exclude(is_superuser=True).prefetch_related("items")
     serializer_class = UserSerializer
     pagination_class = CustomPagination
     filter_backends = [SearchFilter, OrderingFilter]

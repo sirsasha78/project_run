@@ -134,7 +134,7 @@ class UserDetailSerializer(UserSerializer):
         """
 
         collected_items = list(obj.items.all())
-        return CollectibleItemSerializer(data=collected_items, many=True).data
+        return CollectibleItemSerializer(collected_items, many=True).data
 
 
 class AthleteInfoSerializer(serializers.ModelSerializer):
