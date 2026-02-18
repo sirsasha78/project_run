@@ -1,7 +1,9 @@
 from django.contrib.auth.models import User
+from django.db.models import Min, Max
 from geopy.distance import geodesic
 
-from app_run.models import Position
+
+from app_run.models import Position, Run
 from artifacts.models import CollectibleItem
 
 
@@ -43,3 +45,22 @@ def check_and_collect_artifacts(user: User, latitude: float, longitude: float) -
         distance = geodesic(start, end).meters
         if distance <= 100:
             user.items.add(item)
+
+
+def calculate_run_time_seconds(run: Run) -> int:
+    """Вычисляет продолжительность забега в секундах на основе временных меток позиций.
+    Функция определяет минимальное и максимальное значения времени из всех позиций
+    указанного забега (объект `Run`), вычисляет разницу между ними и возвращает
+    продолжительность в секундах. Если отсутствуют временные данные, возвращается 0."""
+
+    times = run.positions.aggregate(
+        min_time=Min("date_time"), max_time=Max("date_time")
+    )
+    min_time = times["min_time"]
+    max_time = times["max_time"]
+
+    if not min_time or not max_time:
+        return 0
+
+    duration = max_time - min_time
+    return int(duration.total_seconds())

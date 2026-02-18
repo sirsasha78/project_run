@@ -9,7 +9,6 @@ from rest_framework import status
 from django.contrib.auth.models import User
 from django.db.models import QuerySet
 from django.conf import settings
-from geopy.distance import geodesic
 
 
 from app_run.models import Run, AthleteInfo, Challenge, Position
@@ -22,7 +21,11 @@ from app_run.serializers import (
     UserDetailSerializer,
 )
 from app_run.paginations import CustomPagination
-from app_run.utils import calculate_run_distance, check_and_collect_artifacts
+from app_run.utils import (
+    calculate_run_distance,
+    check_and_collect_artifacts,
+    calculate_run_time_seconds,
+)
 from app_run.challenge_service import (
     create_challenge_ten_runs,
     create_challenge_50_kilometers,
@@ -172,10 +175,13 @@ class FinishView(APIView):
         Пытается найти забег по идентификатору, переданному в URL (`run_id`).
         Если забег не найден, возвращает HTTP 404.
         Если забег уже завершён или не находится в статусе «в процессе», возвращает HTTP 400.
-        Если забег активен, изменяет его статус на «завершён», сохраняет объект,
-        вычисляет пройденную дистанцию на основе собранных GPS-позиций и сохраняет её.
-        Дополнительно проверяет, является ли этот забег 10-м завершённым для пользователя.
-        В случае выполнения условия — создаёт новое испытание (Challenge)."""
+        В случае активного забега:
+          - изменяет статус на «завершён»;
+          - вычисляет общее время забега в секундах и сохраняет его;
+          - вычисляет пройденную дистанцию по GPS-позициям и сохраняет её;
+          - проверяет, является ли этот забег 10-м завершённым для пользователя,
+            и при выполнении условия создаёт новое испытание;
+          - аналогично проверяет достижение суммарной дистанции 50 км."""
 
         try:
             run = Run.objects.get(id=kwargs["run_id"])
@@ -186,6 +192,10 @@ class FinishView(APIView):
 
         if run.status == Run.RUN_STATUS_IN_PROGRESS:
             run.status = Run.RUN_STATUS_FINISHED
+            run.save()
+
+            run_time = calculate_run_time_seconds(run)
+            run.run_time_seconds = run_time
             run.save()
 
             all_positions = list(run.positions.all())

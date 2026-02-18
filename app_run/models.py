@@ -50,6 +50,12 @@ class Run(models.Model):
         verbose_name="Дистанция",
         help_text="Расстояние, которое пробежал атлет",
     )
+    run_time_seconds = models.IntegerField(
+        blank=True,
+        default=0,
+        verbose_name="Время забега",
+        help_text="Время, затраченное на забег в секундах",
+    )
 
     class Meta:
         """Метакласс модели Run.
