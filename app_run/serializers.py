@@ -204,7 +204,7 @@ class PositionSerializer(serializers.ModelSerializer):
         Определяет модель и поля, которые будут использоваться при сериализации."""
 
         model = Position
-        fields = ("id", "run", "latitude", "longitude", "date_time")
+        fields = ("id", "run", "latitude", "longitude", "date_time", "speed")
 
     def validate_latitude(self, value: float) -> float:
         """Валидирует значение широты.

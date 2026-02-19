@@ -166,6 +166,9 @@ class Position(models.Model):
         verbose_name="Время фиксации",
         help_text="Точная временная метка позиции, переданная трекером.",
     )
+    speed = models.FloatField(
+        default=0.0, verbose_name="Скорость", help_text="Скорость в метрах в секунду"
+    )
 
     class Meta:
         """Метаданные модели Position."""

@@ -9,6 +9,7 @@ from rest_framework import status
 from django.contrib.auth.models import User
 from django.db.models import QuerySet, Count, Q
 from django.conf import settings
+from geopy.distance import geodesic
 
 
 from app_run.models import Run, AthleteInfo, Challenge, Position
@@ -25,6 +26,7 @@ from app_run.utils import (
     calculate_run_distance,
     check_and_collect_artifacts,
     calculate_run_time_seconds,
+    calculate_speed,
 )
 from app_run.challenge_service import (
     create_challenge_ten_runs,
@@ -330,17 +332,22 @@ class PositionViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer: PositionSerializer) -> None:
         """Выполняет дополнительные действия при создании новой позиции.
-        Извлекает данные из валидированного сериализатора, определяет пользователя
-        (участника забега) и координаты. Проверяет, находятся ли в указанной точке
-        какие-либо артефакты, и при наличии — зачисляет их пользователю.
-        После выполнения бизнес-логики сохраняет объект Position в базу данных.
-        Примечание:
-            Метод вызывается автоматически при успешной валидации данных
-            в процессе создания объекта через API."""
+
+        Метод переопределяет стандартное поведение создания объекта в DRF.
+        Извлекает валидированные данные из сериализатора, определяет пользователя
+        (участника забега), координаты и время. Рассчитывает текущую скорость
+        участника на основе предыдущих данных о местоположении. Сохраняет позицию
+        с рассчитанной скоростью. Затем проверяет, находятся ли в указанной точке
+        артефакты, и, если да — зачисляет их пользователю."""
 
         data = serializer.validated_data
         user = data["run"].athlete
         latitude = data["latitude"]
         longitude = data["longitude"]
+        run = data["run"]
+        current_time = data["date_time"]
+
+        speed = calculate_speed(run, current_time, latitude, longitude)
+
         check_and_collect_artifacts(user, latitude, longitude)
-        serializer.save()
+        serializer.save(speed=speed)
