@@ -1,9 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from django.db.models import QuerySet, Min, Max
 
 from app_run.models import Run, AthleteInfo, Challenge, Position
-from artifacts.models import CollectibleItem
 from artifacts.serializers import CollectibleItemSerializer
 
 
@@ -96,10 +94,13 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_runs_finished(self, obj: User) -> int:
         """Возвращает количество завершённых забегов, связанных с пользователем.
-        Подсчитывает число объектов Run, связанных с пользователем через обратную
-        связь `runs`, у которых статус равен 'finished'."""
+        Метод подсчитывает число объектов модели `Run`, которые связаны с переданным
+        пользователем через атрибут `count_run` и имеют статус 'finished'. Предполагается,
+        что значение `count_run` уже было вычислено ранее, например, с использованием
+        аннотации в queryset (например, `Count('runs', filter=Q(runs__status='finished'))`).
+        """
 
-        runs = obj.runs.filter(status="finished").count()
+        runs = obj.count_run
         return runs
 
 

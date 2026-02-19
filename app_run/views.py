@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from rest_framework import viewsets
 from rest_framework import status
 from django.contrib.auth.models import User
-from django.db.models import QuerySet
+from django.db.models import QuerySet, Count, Q
 from django.conf import settings
 
 
@@ -30,7 +30,6 @@ from app_run.challenge_service import (
     create_challenge_ten_runs,
     create_challenge_50_kilometers,
 )
-from artifacts.models import CollectibleItem
 
 
 @api_view(["GET"])
@@ -97,7 +96,7 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
                                 через параметр `ordering` в URL. Доступна сортировка по дате регистрации.
     """
 
-    queryset = User.objects.all().exclude(is_superuser=True).prefetch_related("items")
+    queryset = User.objects.all().exclude(is_superuser=True)
     serializer_class = UserSerializer
     pagination_class = CustomPagination
     filter_backends = [SearchFilter, OrderingFilter]
@@ -120,14 +119,19 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
         return super().get_serializer_class()
 
     def get_queryset(self) -> QuerySet[User]:
-        """Возвращает отфильтрованный набор пользователей в зависимости от параметра 'type' в GET-запросе.
-        Если параметр 'type' присутствует и равен 'coach', возвращаются только пользователи с is_staff=True.
-        Если параметр 'type' равен 'athlete', возвращаются пользователи с is_staff=False.
-        Если параметр отсутствует или имеет другое значение, возвращается базовый queryset (без суперпользователей).
-        Returns:
-            QuerySet[User]: Отфильтрованный набор экземпляров модели User."""
+        """Возвращает отфильтрованный набор пользователей в зависимости от значения параметра 'type' в GET-запросе.
+        Метод аннотирует каждый объект пользователя количеством завершённых забегов (атрибут `count_run`),
+        после чего фильтрует queryset по следующим правилам:
+         - Если параметр 'type' равен 'coach', возвращаются только пользователи, у которых is_staff=True.
+         - Если параметр 'type' равен 'athlete', возвращаются только пользователи, у которых is_staff=False.
+         - Если параметр 'type' отсутствует или имеет иное значение, возвращается полный аннотированный queryset,
+           исключая суперпользователей (при наличии дополнительной фильтрации по ним в базовом queryset).
+        Используется для разделения пользователей на тренеров и спортсменов на уровне API.
+        """
 
-        users = self.queryset
+        users = self.queryset.annotate(
+            count_run=Count("runs", filter=Q(runs__status=Run.RUN_STATUS_FINISHED))
+        )
         users_type = self.request.query_params.get("type", None)
         if users_type == "coach":
             return users.filter(is_staff=True)
