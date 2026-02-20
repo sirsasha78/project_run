@@ -97,3 +97,36 @@ def calculate_speed(
     else:
         speed = 0.0
     return speed
+
+
+def calculate_cumulative_distance(run: Run, latitude: float, longitude: float) -> float:
+    """Вычисляет суммарное пройденное расстояние для указанного забега с учётом текущей позиции.
+    Функция рассчитывает общее расстояние, пройденное во время забега, на основе геопозиций,
+    сохранённых в базе данных, и добавляет расстояние от последней зафиксированной точки
+    до текущей переданной координаты (например, текущего местоположения пользователя).
+    Расчёты выполняются с использованием геодезического метода (наиболее точного для
+    расчёта расстояний по поверхности Земли) через библиотеку geopy. Результат округляется
+    до двух знаков после запятой.
+    Примечания:
+        - Требуется, чтобы модель `Run` имела отношение `positions`, связанное с моделью `Position`,
+          содержащей поля `latitude`, `longitude` и `date_time`.
+        - Позиции сортируются по временной метке `date_time` для корректного восстановления маршрута.
+        - Последнее расстояние добавляется от последней сохранённой позиции до текущих координат,
+          что позволяет отображать актуальное расстояние в реальном времени.
+    """
+
+    positions = list(run.positions.all().order_by("date_time"))
+    total = 0.0
+
+    if not positions:
+        return 0.0
+
+    for i in range(len(positions) - 1):
+        start = (positions[i].latitude, positions[i].longitude)
+        end = (positions[i + 1].latitude, positions[i + 1].longitude)
+        total += geodesic(start, end).kilometers
+
+    last_pos = (positions[-1].latitude, positions[-1].longitude)
+    current_pos = (latitude, longitude)
+    total += geodesic(last_pos, current_pos).kilometers
+    return round(total, 2)

@@ -193,6 +193,8 @@ class PositionSerializer(serializers.ModelSerializer):
         latitude (float): Географическая широта в диапазоне от -90 до 90 градусов.
         longitude (float): Географическая долгота в диапазоне от -180 до 180 градусов.
         date_time: временная метка фиксации позиции в формате ISO 8601.
+        speed (float, опционально): Скорость движения участника в момент фиксации позиции.
+        distance (float, опционально): Пройденное расстояние участником к моменту фиксации позиции.
     Поле `date_time` сериализуется в формате строки с микросекундами:
     "ГГГГ-ММ-ДДTЧЧ:ММ:СС.мкс".
     """
@@ -204,7 +206,15 @@ class PositionSerializer(serializers.ModelSerializer):
         Определяет модель и поля, которые будут использоваться при сериализации."""
 
         model = Position
-        fields = ("id", "run", "latitude", "longitude", "date_time", "speed")
+        fields = (
+            "id",
+            "run",
+            "latitude",
+            "longitude",
+            "date_time",
+            "speed",
+            "distance",
+        )
 
     def validate_latitude(self, value: float) -> float:
         """Валидирует значение широты.

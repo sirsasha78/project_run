@@ -27,6 +27,7 @@ from app_run.utils import (
     check_and_collect_artifacts,
     calculate_run_time_seconds,
     calculate_speed,
+    calculate_cumulative_distance,
 )
 from app_run.challenge_service import (
     create_challenge_ten_runs,
@@ -331,14 +332,18 @@ class PositionViewSet(viewsets.ModelViewSet):
     filterset_fields = ["run"]
 
     def perform_create(self, serializer: PositionSerializer) -> None:
-        """Выполняет дополнительные действия при создании новой позиции.
-
-        Метод переопределяет стандартное поведение создания объекта в DRF.
-        Извлекает валидированные данные из сериализатора, определяет пользователя
-        (участника забега), координаты и время. Рассчитывает текущую скорость
-        участника на основе предыдущих данных о местоположении. Сохраняет позицию
-        с рассчитанной скоростью. Затем проверяет, находятся ли в указанной точке
-        артефакты, и, если да — зачисляет их пользователю."""
+        """Выполняет дополнительные действия при создании новой позиции участника забега.
+        Метод переопределяет стандартное поведение создания объекта в Django REST Framework.
+        Извлекает валидированные данные из сериализатора, определяет пользователя (участника забега),
+        географические координаты и время фиксации позиции. На основе предыдущих данных о местоположении
+        рассчитывает текущую скорость и суммарное пройденное расстояние участника. Сохраняет новую
+        позицию с рассчитанными значениями скорости и дистанции. После сохранения проверяет,
+        находятся ли в указанной точке артефакты, и при их наличии зачисляет их пользователю.
+        Побочные эффекты:
+        - Создаётся запись о новой позиции участника.
+        - Обновляется информация о собранных артефактах для пользователя.
+        - Выполняются вычисления скорости и пройденного расстояния.
+        """
 
         data = serializer.validated_data
         user = data["run"].athlete
@@ -348,6 +353,7 @@ class PositionViewSet(viewsets.ModelViewSet):
         current_time = data["date_time"]
 
         speed = calculate_speed(run, current_time, latitude, longitude)
+        distance = calculate_cumulative_distance(run, latitude, longitude)
 
         check_and_collect_artifacts(user, latitude, longitude)
-        serializer.save(speed=speed)
+        serializer.save(speed=speed, distance=distance)

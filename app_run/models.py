@@ -167,7 +167,12 @@ class Position(models.Model):
         help_text="Точная временная метка позиции, переданная трекером.",
     )
     speed = models.FloatField(
-        default=0.0, verbose_name="Скорость", help_text="Скорость в метрах в секунду"
+        default=0.0, verbose_name="Скорость", help_text="Скорость в метрах в секунду."
+    )
+    distance = models.FloatField(
+        default=0.0,
+        verbose_name="Расстояние",
+        help_text="Суммарное расстояние от начала забега до этой точки (в километрах).",
     )
 
     class Meta:
