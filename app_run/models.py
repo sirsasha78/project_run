@@ -56,6 +56,11 @@ class Run(models.Model):
         verbose_name="Время забега",
         help_text="Время, затраченное на забег в секундах",
     )
+    speed = models.FloatField(
+        default=0.0,
+        verbose_name="Скорость",
+        help_text="Средняя скорость от всех позиций.",
+    )
 
     class Meta:
         """Метакласс модели Run.

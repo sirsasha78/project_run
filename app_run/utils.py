@@ -1,6 +1,6 @@
 from datetime import datetime
 from django.contrib.auth.models import User
-from django.db.models import Min, Max
+from django.db.models import Min, Max, Avg
 from geopy.distance import geodesic
 
 
@@ -130,3 +130,13 @@ def calculate_cumulative_distance(run: Run, latitude: float, longitude: float) -
     current_pos = (latitude, longitude)
     total += geodesic(last_pos, current_pos).kilometers
     return round(total, 2)
+
+
+def calculate_average_speed(run: Run) -> float:
+    """Вычисляет среднюю скорость для указанного забега.
+    Функция агрегирует значения скорости из всех позиций, связанных с переданным
+    объектом забега (Run), и возвращает их среднее значение. Если данные о скорости
+    отсутствуют, возвращается 0.0."""
+
+    average_speed = run.positions.aggregate(Avg("speed"))["speed__avg"]
+    return round(average_speed, 2) if average_speed is not None else 0.0

@@ -50,6 +50,7 @@ class RunSerializer(serializers.ModelSerializer):
             "athlete_data",
             "distance",
             "run_time_seconds",
+            "speed",
         )
 
 

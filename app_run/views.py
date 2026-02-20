@@ -9,8 +9,6 @@ from rest_framework import status
 from django.contrib.auth.models import User
 from django.db.models import QuerySet, Count, Q
 from django.conf import settings
-from geopy.distance import geodesic
-
 
 from app_run.models import Run, AthleteInfo, Challenge, Position
 from app_run.serializers import (
@@ -28,6 +26,7 @@ from app_run.utils import (
     calculate_run_time_seconds,
     calculate_speed,
     calculate_cumulative_distance,
+    calculate_average_speed,
 )
 from app_run.challenge_service import (
     create_challenge_ten_runs,
@@ -186,6 +185,7 @@ class FinishView(APIView):
           - изменяет статус на «завершён»;
           - вычисляет общее время забега в секундах и сохраняет его;
           - вычисляет пройденную дистанцию по GPS-позициям и сохраняет её;
+          - вычисляется средняя скорость на основе данных о скорости из позиций и сохраняется;
           - проверяет, является ли этот забег 10-м завершённым для пользователя,
             и при выполнении условия создаёт новое испытание;
           - аналогично проверяет достижение суммарной дистанции 50 км."""
@@ -199,14 +199,15 @@ class FinishView(APIView):
 
         if run.status == Run.RUN_STATUS_IN_PROGRESS:
             run.status = Run.RUN_STATUS_FINISHED
-            run.save()
 
             run_time = calculate_run_time_seconds(run)
             run.run_time_seconds = run_time
-            run.save()
 
             all_positions = list(run.positions.all())
             run.distance = calculate_run_distance(all_positions)
+
+            run.speed = calculate_average_speed(run)
+
             run.save()
 
             finished_run = Run.objects.filter(
