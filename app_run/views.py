@@ -31,6 +31,7 @@ from app_run.utils import (
 from app_run.challenge_service import (
     create_challenge_ten_runs,
     create_challenge_50_kilometers,
+    create_challenge_2_kilometers_in_10_minutes,
 )
 
 
@@ -188,7 +189,9 @@ class FinishView(APIView):
           - вычисляется средняя скорость на основе данных о скорости из позиций и сохраняется;
           - проверяет, является ли этот забег 10-м завершённым для пользователя,
             и при выполнении условия создаёт новое испытание;
-          - аналогично проверяет достижение суммарной дистанции 50 км."""
+          - аналогично проверяет достижение суммарной дистанции 50 км.
+          - также проверяет, был ли пробежан 2 км за 10 минут, и при успехе — создаёт соответствующее испытание.
+        """
 
         try:
             run = Run.objects.get(id=kwargs["run_id"])
@@ -216,6 +219,7 @@ class FinishView(APIView):
 
             create_challenge_ten_runs(run.athlete, finished_run)
             create_challenge_50_kilometers(run.athlete, finished_run)
+            create_challenge_2_kilometers_in_10_minutes(run.athlete, run)
 
             return Response({"status": "Забег закончен"}, status=status.HTTP_200_OK)
         return Response(
