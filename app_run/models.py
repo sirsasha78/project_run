@@ -190,3 +190,42 @@ class Position(models.Model):
         """Возвращает строковое представление объекта Position."""
 
         return f"Координаты - {self.run.athlete.username}"
+
+
+class Subscribe(models.Model):
+    """Модель подписки пользователя-атлета на тренера.
+    Определяет отношение между атлетом и тренером, где атлет может подписаться
+    на тренера. Хранит статус активности подписки.
+    """
+
+    athlete = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="subscriptions",
+        verbose_name="Атлет",
+        help_text="Пользователь, который совершил забег.",
+    )
+    coach = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="subscribers",
+        verbose_name="Тренер",
+        help_text="Пользователь, на которого оформлена подписка.",
+    )
+    is_subscribed = models.BooleanField(
+        default=False,
+        verbose_name="Подписка",
+        help_text="Указывает, активирована ли подписка на тренера.",
+    )
+
+    class Meta:
+        """Метаданные модели Subscribe."""
+
+        verbose_name = "Подписка"
+        verbose_name_plural = "Подписки"
+        unique_together = ("athlete", "coach")
+
+    def __str__(self) -> str:
+        """Возвращает строковое представление объекта подписки."""
+
+        return f"Подписка на тренера {self.coach.username} от атлета {self.athlete.username}"

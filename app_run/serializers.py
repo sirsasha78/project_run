@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 
-from app_run.models import Run, AthleteInfo, Challenge, Position
+from app_run.models import Run, AthleteInfo, Challenge, Position, Subscribe
 from artifacts.serializers import CollectibleItemSerializer
 
 
@@ -247,4 +247,42 @@ class PositionSerializer(serializers.ModelSerializer):
 
         if attrs["run"].status != Run.RUN_STATUS_IN_PROGRESS:
             raise serializers.ValidationError("Забег должен быть в статусе in_progress")
+        return attrs
+
+
+class SubscribeSerializer(serializers.ModelSerializer):
+    """Сериализатор для модели Subscribe.
+    Используется для сериализации и десериализации данных подписок между
+    спортсменами и тренерами. Преобразует объекты модели Subscribe в формат JSON
+    и обратно, обеспечивая валидацию полей при создании или обновлении подписки."""
+
+    class Meta:
+        """Метакласс сериализатора, определяющий модель и поля, подлежащие сериализации."""
+
+        model = Subscribe
+        fields = ("athlete", "coach", "is_subscribed")
+
+    def validate(self, attrs: dict) -> dict:
+        """Выполняет пользовательскую валидацию данных перед сохранением подписки.
+
+        Проверяет следующие бизнес-правила:
+        1. Пользователь не может подписаться на себя.
+        2. Только тренеры (пользователи с is_staff=True) могут получать подписки.
+        3. Спортсмен не должен быть тренером.
+        4. Нельзя создать дубликат активной подписки.
+        """
+
+        athlete = attrs["athlete"]
+        coach = attrs["coach"]
+
+        if athlete == coach:
+            raise serializers.ValidationError("Нельзя подписаться на себя.")
+        if not coach.is_staff:
+            raise serializers.ValidationError("Только тренеры могут иметь подписчиков.")
+        if athlete.is_staff:
+            raise serializers.ValidationError("Атлет не должен быть тренером.")
+        if Subscribe.objects.filter(
+            athlete=athlete, coach=coach, is_subscribed=True
+        ).exists():
+            raise serializers.ValidationError("Подписка уже существует.")
         return attrs
