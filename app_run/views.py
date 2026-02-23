@@ -19,6 +19,8 @@ from app_run.serializers import (
     PositionSerializer,
     UserDetailSerializer,
     SubscribeSerializer,
+    DetailAthleteSerializer,
+    DetailCoachSerializer,
 )
 from app_run.paginations import CustomPagination
 from app_run.utils import (
@@ -107,19 +109,32 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ["first_name", "last_name"]
     ordering_fields = ["date_joined"]
 
-    def get_serializer_class(self) -> UserSerializer | UserDetailSerializer:
+    def get_serializer_class(
+        self,
+    ) -> UserSerializer | DetailCoachSerializer | DetailAthleteSerializer:
         """Определяет и возвращает класс сериализатора в зависимости от выполняемого действия.
-        Используется для разделения логики сериализации при получении списка пользователей
-        и детальной информации о пользователе.
-        Возвращаемые значения:
-            UserSerializer: Если действие — 'list' (получение списка).
-            UserDetailSerializer: Если действие — 'retrieve' (получение одного объекта).
-            Родительский класс сериализатора: Для любых других действий."""
+        Метод используется для динамического выбора подходящего сериализатора
+        на основе текущего действия (action), что позволяет применять разную логику
+        сериализации данных при выполнении различных операций, таких как получение
+        списка пользователей или детальной информации о конкретном пользователе.
+        Возвращаемые значения зависят от значения атрибута `self.action`:
+            - При действии 'list' возвращается `UserSerializer` — для представления
+              краткой информации о пользователях в списке.
+            - При действии 'retrieve':
+                - Если пользователь является администратором (`is_staff`), возвращается
+                  `DetailCoachSerializer`.
+                - В противном случае возвращается `DetailAthleteSerializer`.
+            - Для всех остальных действий вызывается метод родительского класса,
+              который определяет сериализатор по умолчанию.
+        """
 
         if self.action == "list":
             return UserSerializer
         if self.action == "retrieve":
-            return UserDetailSerializer
+            user = self.get_object()
+            if user.is_staff:
+                return DetailCoachSerializer
+            return DetailAthleteSerializer
         return super().get_serializer_class()
 
     def get_queryset(self) -> QuerySet[User]:

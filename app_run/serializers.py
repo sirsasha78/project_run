@@ -105,29 +105,24 @@ class UserSerializer(serializers.ModelSerializer):
         return runs
 
 
-class UserDetailSerializer(UserSerializer):
-    """Сериализатор для детального представления пользователя с дополнительным полем 'items'.
-    Добавляет к базовому сериализатору UserSerializer поле 'items', содержащее список
-    всех объектов, связанных с пользователем через отношение 'items'. Предназначен для
-    использования в API-представлениях, где требуется отобразить подробную информацию
-    о пользователе, включая его связанные данные.
-    Атрибуты:
-        items (serializers.SerializerMethodField): Поле, возвращающее все элементы,
-            связанные с пользователем. Заполняется с помощью метода get_items."""
+class DetailAthleteSerializer(UserSerializer):
+    """Подробный сериализатор для пользователя с ролью спортсмена.
+    Расширяет функциональность UserSerializer, добавляя дополнительные поля,
+    специфичные для спортсмена: список собранных предметов (items) и его тренер (coach).
+    Используется для получения детальной информации о пользователе-спортсмене,
+    включая связанные с ним объекты и отношения."""
 
     items = serializers.SerializerMethodField()
+    coach = serializers.SerializerMethodField()
 
     class Meta(UserSerializer.Meta):
-        """Метакласс для настройки поведения сериализатора.
+        """Метакласс сериализатора, определяющий модель и поля для сериализации.
         Наследует метакласс из UserSerializer и расширяет список полей,
-        добавляя поле 'items' к уже существующим полям базового сериализатора.
-        Атрибуты:
-            model (django.db.models.Model): Модель, используемая сериализатором — User.
-            fields (list): Список полей модели, подлежащих сериализации, включая
-                         унаследованные из UserSerializer и добавленное поле 'items'."""
+        добавляя 'items' и 'coach' к уже существующим полям родительского сериализатора.
+        """
 
         model = User
-        fields = UserSerializer.Meta.fields + ["items"]
+        fields = UserSerializer.Meta.fields + ["items", "coach"]
 
     def get_items(self, obj: User):
         """Возвращает все объекты, связанные с пользователем через отношение 'items'.
@@ -138,6 +133,49 @@ class UserDetailSerializer(UserSerializer):
 
         collected_items = list(obj.items.all())
         return CollectibleItemSerializer(collected_items, many=True).data
+
+    def get_coach(self, obj: User) -> list[int]:
+        """Возвращает идентификатор тренера, на которого подписан пользователь.
+        Получает на вход экземпляр модели User и возвращает ID первого
+        активного тренера, на которого он подписан. Предполагается, что у
+        пользователя может быть только одна активная подписка на тренера."""
+
+        lst_coaches = list(
+            obj.subscriptions.filter(is_subscribed=True).values_list(
+                "coach__id", flat=True
+            )
+        )
+        return lst_coaches[0] if lst_coaches else []
+
+
+class DetailCoachSerializer(UserSerializer):
+    """Сериализатор для подробного отображения данных тренера.
+    Наследуется от UserSerializer и добавляет поле `athletes`, которое содержит
+    список идентификаторов спортсменов, подписанных на данного тренера.
+    Используется для предоставления расширенной информации о тренере,
+    включая его подписчиков-спортсменов."""
+
+    athletes = serializers.SerializerMethodField()
+
+    class Meta(UserSerializer.Meta):
+        """Метакласс сериализатора.
+        Определяет модель и поля, которые будут сериализованы.
+        Добавляет поле `athletes` к полям из родительского сериализатора."""
+
+        model = User
+        fields = UserSerializer.Meta.fields + ["athletes"]
+
+    def get_athletes(self, obj: User) -> list[int]:
+        """Возвращает список идентификаторов спортсменов, подписанных на тренера.
+        Формирует список ID тех пользователей, которые являются спортсменами
+        и активно подписаны на данного пользователя (тренера). Использует связь
+        через related_name 'subscribers' и фильтрует только активные подписки."""
+
+        return list(
+            obj.subscribers.filter(is_subscribed=True).values_list(
+                "athlete__id", flat=True
+            )
+        )
 
 
 class AthleteInfoSerializer(serializers.ModelSerializer):
