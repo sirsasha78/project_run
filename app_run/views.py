@@ -18,6 +18,7 @@ from app_run.serializers import (
     ChallengeSerializer,
     PositionSerializer,
     UserDetailSerializer,
+    SubscribeSerializer,
 )
 from app_run.paginations import CustomPagination
 from app_run.utils import (
@@ -362,3 +363,43 @@ class PositionViewSet(viewsets.ModelViewSet):
 
         check_and_collect_artifacts(user, latitude, longitude)
         serializer.save(speed=speed, distance=distance)
+
+
+class SubscribeView(APIView):
+    """Представление для создания подписки спортсмена на тренера.
+    Позволяет отправить POST-запрос для оформления подписки, проверяя:
+    - Существование тренера с указанным ID и его статус (is_staff=True),
+    - Корректность данных через сериализатор.
+    Атрибуты:
+        serializer_class (type): Класс сериализатора, используемый для валидации
+                                 и сохранения данных подписки."""
+
+    serializer_class = SubscribeSerializer
+
+    def post(self, request: Request, *args, **kwargs) -> Response:
+        """Обрабатывает POST-запрос на создание подписки спортсмена на тренера.
+        Извлекает ID тренера из URL-параметров и ID спортсмена из тела запроса.
+        Проверяет, существует ли пользователь с указанным ID и является ли он тренером (is_staff=True).
+        Если тренер найден, создаётся запись о подписке через сериализатор."""
+
+        coach = kwargs["id"]
+        athlete = request.data.get("athlete")
+        try:
+            user = User.objects.get(id=coach, is_staff=True)
+        except User.DoesNotExist:
+            return Response(
+                {"message": "Тренер с таким ID не найден."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        data = {
+            "athlete": athlete,
+            "coach": coach,
+            "is_subscribed": True,
+        }
+
+        serializer = self.serializer_class(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -10,6 +10,7 @@ from app_run.views import (
     AthleteInfoView,
     ChallengeViewSet,
     PositionViewSet,
+    SubscribeView,
 )
 
 
@@ -25,6 +26,7 @@ urlpatterns = [
     path("runs/<int:run_id>/start/", StartView.as_view(), name="start-run"),
     path("runs/<int:run_id>/stop/", FinishView.as_view(), name="stop-run"),
     path("athlete_info/<int:user_id>/", AthleteInfoView.as_view(), name="athlete-info"),
+    path("subscribe_to_coach/<int:id>/", SubscribeView.as_view(), name="subscribe"),
 ]
 
 urlpatterns += router.urls
