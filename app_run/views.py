@@ -17,7 +17,6 @@ from app_run.serializers import (
     AthleteInfoSerializer,
     ChallengeSerializer,
     PositionSerializer,
-    UserDetailSerializer,
     SubscribeSerializer,
     DetailAthleteSerializer,
     DetailCoachSerializer,
