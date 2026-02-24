@@ -399,7 +399,7 @@ class SubscribeView(APIView):
         coach = kwargs["id"]
         athlete = request.data.get("athlete")
         try:
-            user = User.objects.get(id=coach, is_staff=True)
+            user = User.objects.get(id=coach)
         except User.DoesNotExist:
             return Response(
                 {"message": "Тренер с таким ID не найден."},
