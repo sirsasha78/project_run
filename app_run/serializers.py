@@ -221,6 +221,26 @@ class ChallengeSerializer(serializers.ModelSerializer):
         fields = ("full_name", "athlete")
 
 
+class ChallengesSummarySerializer(serializers.Serializer):
+    """Сериализатор для представления сводной информации о челленджах.
+    Данный сериализатор используется для преобразования данных о челленджах
+    в формат, пригодный для передачи через API. Он включает название челленджа
+    и список участников (спортсменов) с их данными.
+    Атрибуты:
+        name_to_display (serializers.CharField):
+            Отображаемое название челленджа. Представляет собой строку,
+            содержащую имя или заголовок челленджа, которое должно быть
+            показано пользователю.
+        athletes (serializers.ListField):
+            Список спортсменов, участвующих в челлендже. Каждый элемент списка —
+            словарь, содержащий данные об одном из участников. Формат словаря
+            зависит от контекста, но обычно включает такие поля, как имя,
+            результаты, статус и т.д."""
+
+    name_to_display = serializers.CharField()
+    athletes = serializers.ListField(child=serializers.DictField())
+
+
 class PositionSerializer(serializers.ModelSerializer):
     """Сериализатор для модели Position.
     Предназначен для сериализации и десериализации данных о позиции участника забега,

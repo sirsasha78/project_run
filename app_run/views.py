@@ -9,6 +9,7 @@ from rest_framework import status
 from django.contrib.auth.models import User
 from django.db.models import QuerySet, Count, Q
 from django.conf import settings
+from collections import defaultdict
 
 from app_run.models import Run, AthleteInfo, Challenge, Position
 from app_run.serializers import (
@@ -20,6 +21,7 @@ from app_run.serializers import (
     SubscribeSerializer,
     DetailAthleteSerializer,
     DetailCoachSerializer,
+    ChallengesSummarySerializer,
 )
 from app_run.paginations import CustomPagination
 from app_run.utils import (
@@ -417,3 +419,41 @@ class SubscribeView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ChallengesSummaryView(APIView):
+    """Представление для получения сводной информации о вызовах (challenges) с группировкой по названию вызова.
+    Возвращает список вызовов, каждый из которых содержит название вызова и список участников-спортсменов,
+    присоединившихся к этому вызову. Данные формируются динамически на основе связей между моделями
+    Challenge и Athlete.
+    Атрибуты:
+        serializer_class (type): Класс сериализатора, используемый для преобразования
+                                 структуры данных в формат, пригодный для передачи по API.
+    """
+
+    serializer_class = ChallengesSummarySerializer
+
+    def get(self, request: Request, *args, **kwargs) -> Response:
+        """Обрабатывает GET-запрос для получения сводки по всем вызовам.
+
+        Выполняет выборку всех объектов Challenge с предзагрузкой связанных данных спортсмена (athlete),
+        группирует участников по названию вызова и формирует структурированный ответ."""
+
+        challenges = Challenge.objects.all().select_related("athlete")
+        grouped = defaultdict(list)
+
+        for challenge in challenges:
+            athlete_data = {
+                "id": challenge.athlete.pk,
+                "full_name": f"{challenge.athlete.first_name} {challenge.athlete.last_name}",
+                "username": challenge.athlete.username,
+            }
+            grouped[challenge.full_name].append(athlete_data)
+
+        result = [
+            {"name_to_display": full_name, "athletes": data}
+            for full_name, data in grouped.items()
+        ]
+
+        serializer = self.serializer_class(result, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
