@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 from rest_framework import status
 
-from app_run.models import Run
+from app_run.models import Run, Challenge
 
 
 class RunListViewTests(TestCase):
@@ -109,3 +109,57 @@ class RunListViewTests(TestCase):
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Run.objects.count(), 1)
+
+
+class ChallengesSummaryViewTests(TestCase):
+    """Набор тестов для проверки функциональности представления ChallengesSummaryView.
+    Тесты обеспечивают корректность отображения сводной информации о челленджах,
+    включая количество участников и названия челленджей. Проверяется, что данные
+    возвращаются в правильном формате и соответствуют ожидаемым значениям.
+    Атрибуты:
+        client (APIClient): Клиент для выполнения HTTP-запросов.
+        user1 (User): Первый тестовый пользователь.
+        user2 (User): Второй тестовый пользователь.
+        user3 (User): Третий тестовый пользователь.
+        challenge1 (Challenge): Первый тестовый челлендж.
+        challenge2 (Challenge): Второй тестовый челлендж с тем же названием, что и у первого.
+        challenge3 (Challenge): Третий тестовый челлендж с уникальным названием."""
+
+    def setUp(self):
+        """Подготавливает данные для выполнения каждого теста.
+        Создаёт клиент API и несколько пользователей, а также три челленджа,
+        два из которых имеют одинаковое название и привязаны к разным пользователям.
+        Это позволяет проверить группировку участников по названию челленджа."""
+
+        self.client = APIClient()
+        self.user1 = User.objects.create(username="Петр", password=1234)
+        self.user2 = User.objects.create(username="Иван", password=1234)
+        self.user3 = User.objects.create(username="Вася", password=1234)
+        self.challenge1 = Challenge.objects.create(
+            full_name="Пробеги 50 километров!", athlete=self.user1
+        )
+        self.challenge2 = Challenge.objects.create(
+            full_name="Пробеги 50 километров!", athlete=self.user2
+        )
+        self.challenge3 = Challenge.objects.create(
+            full_name="2 километра за 10 минут!", athlete=self.user3
+        )
+
+    def test_get_list(self):
+        """Проверяет корректность работы GET-запроса к эндпоинту 'challenges-summary'.
+        Выполняет запрос к представлению и убеждается, что:
+        - Статус ответа — 200 OK.
+        - Возвращается два уникальных челленджа.
+        - Названия челленджей совпадают с ожидаемыми.
+        - У первого челленджа два участника, так как он создан для двух пользователей.
+        """
+
+        url = reverse("challenges-summary")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+        self.assertEqual(response.data[0]["name_to_display"], "Пробеги 50 километров!")
+        self.assertEqual(
+            response.data[1]["name_to_display"], "2 километра за 10 минут!"
+        )
+        self.assertEqual(len(response.data[0]["athletes"]), 2)
