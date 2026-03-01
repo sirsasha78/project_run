@@ -318,7 +318,17 @@ class SubscribeSerializer(serializers.ModelSerializer):
         """Метакласс сериализатора, определяющий модель и поля, подлежащие сериализации."""
 
         model = Subscribe
-        fields = ("athlete", "coach", "is_subscribed")
+        fields = ("athlete", "coach", "is_subscribed", "rating")
+
+    def validate_rating(self, value: int | None) -> int | None:
+        """Валидирует значение рейтинга.
+        Проверяет, что переданное значение является допустимым рейтингом.
+        Рейтинг должен быть целым числом в диапазоне от 1 до 5 включительно
+        или иметь значение None (если поле необязательное)."""
+
+        if value is not None and (not 1 <= value <= 5):
+            raise serializers.ValidationError("Рэйтинг должен быть от 1 до 5 или None")
+        return value
 
     def validate(self, attrs: dict) -> dict:
         """Выполняет пользовательскую валидацию данных перед сохранением подписки.
