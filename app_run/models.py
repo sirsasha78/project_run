@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 class Run(models.Model):
@@ -195,8 +196,13 @@ class Position(models.Model):
 class Subscribe(models.Model):
     """Модель подписки пользователя-атлета на тренера.
     Определяет отношение между атлетом и тренером, где атлет может подписаться
-    на тренера. Хранит статус активности подписки.
-    """
+    на тренера. Хранит статус активности подписки и рейтинг, который атлет может поставить тренеру.
+    Поля:
+        athlete (ForeignKey): Пользователь-атлет, который оформляет подписку.
+        coach (ForeignKey): Пользователь-тренер, на которого оформляется подписка.
+        is_subscribed (BooleanField): Активна ли подписка.
+        rating (IntegerField): Оценка тренера от 1 до 5. Может быть пустой (null),
+                               если атлет ещё не поставил оценку."""
 
     athlete = models.ForeignKey(
         User,
@@ -216,6 +222,14 @@ class Subscribe(models.Model):
         default=False,
         verbose_name="Подписка",
         help_text="Указывает, активирована ли подписка на тренера.",
+    )
+    rating = models.IntegerField(
+        blank=True,
+        null=True,
+        default=None,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        verbose_name="Рэйтинг",
+        help_text="Оценка тренера от 1 до 5. Не заполняется по умолчанию.",
     )
 
     class Meta:
