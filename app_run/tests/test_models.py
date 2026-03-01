@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.contrib.auth.models import User
 
-from app_run.models import Run, AthleteInfo, Challenge
+from app_run.models import Run, AthleteInfo, Challenge, Position
 
 
 class RunModelTests(TestCase):
@@ -186,3 +186,73 @@ class ChallengeModelTests(TestCase):
         self.assertEqual(all_challenges.count(), 2)
         self.assertEqual(challenge2.full_name, "Пробеги 50 километров!")
         self.assertEqual(challenge2.athlete, athlete2)
+
+
+class PositionModelTests(TestCase):
+    """Тесты для модели Position.
+    Проверяет корректность создания, сохранения и строкового представления
+    объектов позиции (Position), а также их привязку к забегу (Run) и участнику (User).
+    """
+
+    def setUp(self):
+        """Подготавливает данные для тестов.
+        Создаёт:
+        - Пользователя-спортсмена с именем "Петр",
+        - Забег (Run), связанный с этим спортсменом,
+        - Позицию (Position) с заданными координатами, привязанную к забегу."""
+
+        self.athlete = User.objects.create_user(username="Петр", password="123456")
+        self.run = Run.objects.create(athlete=self.athlete)
+        self.position = Position.objects.create(
+            run=self.run, latitude=45.23, longitude=123.12
+        )
+
+    def test_str_representation(self):
+        """Проверяет строковое представление объекта Position.
+        Убеждается, что метод __str__ возвращает строку в формате:
+        'Координаты - <имя_пользователя>'."""
+
+        self.assertEqual(
+            str(self.position), f"Координаты - {self.run.athlete.username}"
+        )
+
+    def test_retrieving_position(self):
+        """Проверяет корректность извлечения данных позиции.
+        Убеждается, что:
+        - Позиция правильно привязана к забегу,
+        - Широта и долгота соответствуют заданным значениям,
+        - Время (date_time) по умолчанию равно None,
+        - Скорость (speed) и дистанция (distance) инициализированы нулевыми значениями.
+        """
+
+        self.assertEqual(self.position.run, self.run)
+        self.assertEqual(self.position.latitude, 45.23)
+        self.assertEqual(self.position.longitude, 123.12)
+        self.assertEqual(self.position.date_time, None)
+        self.assertEqual(self.position.speed, 0.0)
+        self.assertEqual(self.position.distance, 0.0)
+
+    def test_saving_position(self):
+        """Проверяет корректность сохранения новой позиции в базу данных.
+        Создаёт вторую позицию с другим спортсменом и параметрами,
+        сохраняет её и проверяет:
+        - Общее количество позиций в базе стало равно 2,
+        - Все поля новой позиции сохранены корректно."""
+
+        position2 = Position()
+        athlete2 = User.objects.create_user(username="Вася", password="123456")
+        run2 = Run.objects.create(athlete=athlete2)
+        position2.run = run2
+        position2.latitude = 52.12
+        position2.longitude = 132.22
+        position2.speed = 5.0
+        position2.distance = 12.2
+        position2.save()
+
+        all_positions = Position.objects.all()
+        self.assertEqual(all_positions.count(), 2)
+        self.assertEqual(position2.run, run2)
+        self.assertEqual(position2.latitude, 52.12)
+        self.assertEqual(position2.longitude, 132.22)
+        self.assertEqual(position2.speed, 5.0)
+        self.assertEqual(position2.distance, 12.2)
