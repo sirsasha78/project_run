@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.contrib.auth.models import User
 
-from app_run.models import Run, AthleteInfo
+from app_run.models import Run, AthleteInfo, Challenge
 
 
 class RunModelTests(TestCase):
@@ -132,3 +132,57 @@ class AthleteInfoModelTests(TestCase):
         self.assertEqual(athleteinfo2.goals, "Пробежать 10 км.")
         self.assertEqual(athleteinfo2.weight, 78)
         self.assertEqual(athleteinfo2.athlete, athlete2)
+
+
+class ChallengeModelTests(TestCase):
+    """Тесты для модели Challenge.
+    Проверяет корректность создания, сохранения и строкового
+    представления объектов модели Challenge. Использует тестовый
+    фреймворк Django для проверки бизнес-логики и взаимодействия
+    с базой данных."""
+
+    def setUp(self):
+        """Подготавливает данные для тестов.
+        Создаёт тестового пользователя (атлета) и одно испытание (challenge),
+        которые будут использоваться во всех методах тест-кейса."""
+
+        self.athlete = User.objects.create_user(username="Петр", password="123456")
+        self.challenge = Challenge.objects.create(
+            full_name="Сделай 10 Забегов!", athlete=self.athlete
+        )
+
+    def test_str_representation(self):
+        """Проверяет строковое представление объекта Challenge.
+        Убеждается, что метод __str__ возвращает корректную строку
+        формата 'Испытание атлета {username}', где username — имя владельца испытания.
+        """
+
+        self.assertEqual(
+            str(self.challenge), f"Испытание атлета {self.athlete.username}"
+        )
+
+    def test_retrieving_challenge(self):
+        """Проверяет корректность извлечения данных объекта Challenge.
+        Убеждается, что поля full_name и athlete были правильно сохранены
+        и соответствуют ожидаемым значениям после создания объекта."""
+
+        self.assertEqual(self.challenge.full_name, "Сделай 10 Забегов!")
+        self.assertEqual(self.challenge.athlete.username, "Петр")
+
+    def test_saving_challenge(self):
+        """Проверяет корректность сохранения нового объекта Challenge в БД.
+        Создаёт второе испытание с другим атлетом и проверяет:
+        - Общее количество записей в базе стало равно 2,
+        - Новое испытание содержит правильное название,
+        - Новое испытание привязано к правильному атлету."""
+
+        challenge2 = Challenge()
+        athlete2 = User.objects.create_user(username="Вася", password="123456")
+        challenge2.full_name = "Пробеги 50 километров!"
+        challenge2.athlete = athlete2
+        challenge2.save()
+
+        all_challenges = Challenge.objects.all()
+        self.assertEqual(all_challenges.count(), 2)
+        self.assertEqual(challenge2.full_name, "Пробеги 50 километров!")
+        self.assertEqual(challenge2.athlete, athlete2)
