@@ -1,7 +1,8 @@
 from django.test import TestCase
 from django.contrib.auth.models import User
+from django.db import IntegrityError
 
-from app_run.models import Run, AthleteInfo, Challenge, Position
+from app_run.models import Run, AthleteInfo, Challenge, Position, Subscribe
 
 
 class RunModelTests(TestCase):
@@ -256,3 +257,76 @@ class PositionModelTests(TestCase):
         self.assertEqual(position2.longitude, 132.22)
         self.assertEqual(position2.speed, 5.0)
         self.assertEqual(position2.distance, 12.2)
+
+
+class SubscribeModelTests(TestCase):
+    """Тесты для модели Subscribe, проверяющие её корректное поведение.
+    Класс содержит тесты для проверки:
+    - Строкового представления объекта подписки.
+    - Возможности получения данных подписки из базы.
+    - Корректности сохранения новой подписки в базу данных.
+    Атрибуты:
+        athlete (User): Пользователь, выступающий в роли атлета.
+        coach (User): Пользователь, выступающий в роли тренера.
+        subscribe (Subscribe): Объект подписки, созданный для тестов."""
+
+    def setUp(self):
+        """Подготавливает данные для тестов.
+        Создаёт двух пользователей: атлета и тренера, а также объект подписки,
+        связывающий их. Выполняется перед каждым тестовым методом."""
+
+        self.athlete = User.objects.create_user(username="Петр", password="123456")
+        self.coach = User.objects.create_user(username="Василий", password="123456")
+        self.subscribe = Subscribe.objects.create(
+            athlete=self.athlete, coach=self.coach
+        )
+
+    def test_str_representation(self):
+        """Проверяет строковое представление объекта подписки.
+        Убеждается, что метод __str__ возвращает корректную строку формата:
+        'Подписка на тренера {имя_тренера} от атлета {имя_атлета}'."""
+
+        self.assertEqual(
+            str(self.subscribe),
+            f"Подписка на тренера {self.coach.username} от атлета {self.athlete.username}",
+        )
+
+    def test_retrieving_subscribe(self):
+        """Проверяет корректность извлечения данных подписки из базы.
+        Убеждается, что поля объекта подписки соответствуют ожидаемым значениям:
+        - Имя атлета — "Петр".
+        - Имя тренера — "Василий".
+        - Статус подписки (is_subscribed) — False (по умолчанию)."""
+
+        self.assertEqual(self.subscribe.athlete.username, "Петр")
+        self.assertEqual(self.subscribe.coach.username, "Василий")
+        self.assertEqual(self.subscribe.is_subscribed, False)
+
+    def test_unique_constraint(self):
+        """Проверяет, что нельзя подписаться дважды на одного тренера."""
+
+        self.assertRaises(
+            IntegrityError,
+            lambda: Subscribe.objects.create(athlete=self.athlete, coach=self.coach),
+        )
+
+    def test_saving_subscribe(self):
+        """Проверяет корректность сохранения новой подписки в базу данных.
+        Создаёт нового атлета и тренера, формирует новую подписку с is_subscribed=True,
+        сохраняет её и проверяет:
+        - Общее количество подписок в базе стало равно 2.
+        - Сохранённые значения атлета, тренера и статуса соответствуют заданным."""
+
+        subscribe2 = Subscribe()
+        athlete2 = User.objects.create_user(username="Иван", password="123456")
+        coach2 = User.objects.create_user(username="Андрей", password="123456")
+        subscribe2.athlete = athlete2
+        subscribe2.coach = coach2
+        subscribe2.is_subscribed = True
+        subscribe2.save()
+
+        all_subscribes = Subscribe.objects.all()
+        self.assertEqual(all_subscribes.count(), 2)
+        self.assertEqual(subscribe2.athlete, athlete2)
+        self.assertEqual(subscribe2.coach, coach2)
+        self.assertEqual(subscribe2.is_subscribed, True)
