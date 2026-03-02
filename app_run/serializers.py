@@ -315,10 +315,20 @@ class SubscribeSerializer(serializers.ModelSerializer):
     и обратно, обеспечивая валидацию полей при создании или обновлении подписки."""
 
     class Meta:
-        """Метакласс сериализатора, определяющий модель и поля, подлежащие сериализации."""
+        """Метакласс сериализатора, определяющий модель и поля, подлежащие сериализации.
+        Атрибуты:
+        model (type): Модель Django, с которой связан сериализатор — `Subscribe`.
+        fields (tuple): Кортеж полей модели, которые будут включены в сериализацию.
+            Включает: `athlete`, `coach`, `is_subscribed`, `rating`.
+        extra_kwargs (dict): Дополнительные параметры для полей.
+            Поле `is_subscribed` помечено как доступное только для чтения
+            (не может быть изменено при десериализации)."""
 
         model = Subscribe
         fields = ("athlete", "coach", "is_subscribed", "rating")
+        extra_kwargs = {
+            "is_subscribed": {"read_only": True},
+        }
 
     def validate_rating(self, value: int | None) -> int | None:
         """Валидирует значение рейтинга.
@@ -332,12 +342,12 @@ class SubscribeSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs: dict) -> dict:
         """Выполняет пользовательскую валидацию данных перед сохранением подписки.
-
-        Проверяет следующие бизнес-правила:
-        1. Пользователь не может подписаться на себя.
-        2. Только тренеры (пользователи с is_staff=True) могут получать подписки.
-        3. Спортсмен не должен быть тренером.
-        4. Нельзя создать дубликат активной подписки.
+         Проверяет следующие бизнес-правила:
+         1. Пользователь не может подписаться на себя.
+         2. Только тренеры (пользователи с is_staff=True) могут получать подписки.
+         3. Спортсмен не должен быть тренером.
+         4. Нельзя создать дубликат активной подписки — проверка на существование
+        активной подписки между теми же пользователями.
         """
 
         athlete = attrs["athlete"]
@@ -349,8 +359,10 @@ class SubscribeSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Только тренеры могут иметь подписчиков.")
         if athlete.is_staff:
             raise serializers.ValidationError("Атлет не должен быть тренером.")
-        if Subscribe.objects.filter(
+
+        subscribe = Subscribe.objects.filter(
             athlete=athlete, coach=coach, is_subscribed=True
-        ).exists():
+        ).first()
+        if subscribe and self.instance != subscribe:
             raise serializers.ValidationError("Подписка уже существует.")
         return attrs

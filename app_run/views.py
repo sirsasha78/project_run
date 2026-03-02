@@ -11,7 +11,7 @@ from django.db.models import QuerySet, Count, Q
 from django.conf import settings
 from collections import defaultdict
 
-from app_run.models import Run, AthleteInfo, Challenge, Position
+from app_run.models import Run, AthleteInfo, Challenge, Position, Subscribe
 from app_run.serializers import (
     RunSerializer,
     UserSerializer,
@@ -457,3 +457,61 @@ class ChallengesSummaryView(APIView):
 
         serializer = self.serializer_class(result, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class RatingView(APIView):
+    """Представление для обновления оценки тренера со стороны атлета.
+    Позволяет атлету изменить свою оценку (рейтинг) тренера в рамках существующей подписки.
+    Доступно только для авторизованных пользователей. Проверяет существование тренера,
+    атлета и активной подписки перед обновлением данных.
+    Атрибуты:
+        serializer_class (type): Класс сериализатора, используемый для валидации
+                                 и обновления данных подписки. В данном случае —
+                                 SubscribeSerializer."""
+
+    serializer_class = SubscribeSerializer
+
+    def patch(self, request: Request, *args, **kwargs) -> Response:
+        """Обрабатывает PATCH-запрос для частичного обновления оценки в подписке.
+        Извлекает ID тренера из URL-параметров и ID атлета из тела запроса.
+        Проверяет:
+         - Существует ли пользователь с указанным `coach_id` и является ли он тренером (is_staff=True);
+         - Существует ли пользователь с указанным `athlete_id` и является ли он атлетом (is_staff=False);
+         - Существует ли активная подписка (`is_subscribed=True`) между данным атлетом и тренером.
+        При успешной валидации данных обновляет оценку (и другие поля, если переданы)
+        через сериализатор и возвращает обновлённые данные."""
+
+        coach_id = kwargs["coach_id"]
+        athlete_id = request.data.get("athlete")
+
+        try:
+            coach = User.objects.get(id=coach_id, is_staff=True)
+        except User.DoesNotExist:
+            return Response(
+                {"message": "Тренер с таким id не существует"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            athlete = User.objects.get(id=athlete_id, is_staff=False)
+        except User.DoesNotExist:
+            return Response(
+                {"message": "Атлет с таким id не существует"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            subscribe = Subscribe.objects.get(
+                athlete=athlete, coach=coach, is_subscribed=True
+            )
+        except Subscribe.DoesNotExist:
+            return Response(
+                {"message": "Подписки не существует"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = self.serializer_class(subscribe, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

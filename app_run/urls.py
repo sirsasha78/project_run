@@ -12,6 +12,7 @@ from app_run.views import (
     PositionViewSet,
     SubscribeView,
     ChallengesSummaryView,
+    RatingView,
 )
 
 
@@ -33,6 +34,7 @@ urlpatterns = [
         ChallengesSummaryView.as_view(),
         name="challenges-summary",
     ),
+    path("rate_coach/<int:coach_id>/", RatingView.as_view(), name="rate-coach"),
 ]
 
 urlpatterns += router.urls
