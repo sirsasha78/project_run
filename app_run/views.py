@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from rest_framework import viewsets
 from rest_framework import status
 from django.contrib.auth.models import User
-from django.db.models import QuerySet, Count, Q
+from django.db.models import QuerySet, Count, Q, Avg
 from django.conf import settings
 from collections import defaultdict
 
@@ -103,7 +103,17 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
                                 через параметр `ordering` в URL. Доступна сортировка по дате регистрации.
     """
 
-    queryset = User.objects.all().exclude(is_superuser=True)
+    queryset = (
+        User.objects.all()
+        .exclude(is_superuser=True)
+        .annotate(
+            count_run=Count(
+                "runs",
+                filter=Q(runs__status=Run.RUN_STATUS_FINISHED),
+                rating=Avg("subscribers__rating"),
+            )
+        )
+    )
     serializer_class = UserSerializer
     pagination_class = CustomPagination
     filter_backends = [SearchFilter, OrderingFilter]
@@ -150,8 +160,13 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
         """
 
         users = self.queryset.annotate(
-            count_run=Count("runs", filter=Q(runs__status=Run.RUN_STATUS_FINISHED))
+            count_run=Count(
+                "runs",
+                filter=Q(runs__status=Run.RUN_STATUS_FINISHED),
+            ),
+            rating=Avg("subscribers__rating"),
         )
+        print(users.query)
         users_type = self.request.query_params.get("type", None)
         if users_type == "coach":
             return users.filter(is_staff=True)

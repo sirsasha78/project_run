@@ -1,3 +1,4 @@
+from django.db.models import Q, Avg
 from rest_framework import serializers
 from django.contrib.auth.models import User
 
@@ -65,6 +66,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     type = serializers.SerializerMethodField()
     runs_finished = serializers.SerializerMethodField()
+    rating = serializers.SerializerMethodField()
 
     class Meta:
         """Метакласс сериализатора, определяющий модель и поля для сериализации.
@@ -82,6 +84,7 @@ class UserSerializer(serializers.ModelSerializer):
             "first_name",
             "type",
             "runs_finished",
+            "rating",
         ]
 
     def get_type(self, obj: User) -> str:
@@ -103,6 +106,9 @@ class UserSerializer(serializers.ModelSerializer):
 
         runs = obj.count_run
         return runs
+
+    def get_rating(self, obj: User) -> float:
+        return obj.rating
 
 
 class DetailAthleteSerializer(UserSerializer):
