@@ -486,8 +486,8 @@ class RatingView(APIView):
 
     serializer_class = SubscribeSerializer
 
-    def patch(self, request: Request, *args, **kwargs) -> Response:
-        """Обрабатывает PATCH-запрос для частичного обновления оценки в подписке.
+    def post(self, request: Request, *args, **kwargs) -> Response:
+        """Обрабатывает POST-запрос для частичного обновления оценки в подписке.
         Извлекает ID тренера из URL-параметров и ID атлета из тела запроса.
         Проверяет:
          - Существует ли пользователь с указанным `coach_id` и является ли он тренером (is_staff=True);
@@ -500,7 +500,7 @@ class RatingView(APIView):
         athlete_id = request.data.get("athlete")
 
         try:
-            coach = User.objects.get(id=coach_id, is_staff=True)
+            coach = User.objects.get(id=coach_id)
         except User.DoesNotExist:
             return Response(
                 {"message": "Тренер с таким id не существует"},
@@ -508,7 +508,7 @@ class RatingView(APIView):
             )
 
         try:
-            athlete = User.objects.get(id=athlete_id, is_staff=False)
+            athlete = User.objects.get(id=athlete_id)
         except User.DoesNotExist:
             return Response(
                 {"message": "Атлет с таким id не существует"},
