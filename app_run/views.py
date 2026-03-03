@@ -1,3 +1,4 @@
+from encodings.punycode import T
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -485,6 +486,32 @@ class RatingView(APIView):
                                  SubscribeSerializer."""
 
     serializer_class = SubscribeSerializer
+
+    def get(self, request: Request, *args, **kwargs) -> Response:
+        coach = kwargs["coach_id"]
+        athlete = request.data.get("athlete")
+
+        try:
+            coach = User.objects.get(id=coach)
+        except User.DoesNotExist:
+            return Response(
+                {"message": "Тренер с таким id не существует"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        subscribe = Subscribe.objects.filter(
+            athlete=athlete, coach=coach, is_subscribed=True
+        ).first()
+
+        if subscribe:
+            return Response(
+                {"rating": subscribe.rating, "is_subscribed": True},
+                status=status.HTTP_200_OK,
+            )
+        else:
+            return Response(
+                {"rating": None, "is_subscribed": False}, status=status.HTTP_200_OK
+            )
 
     def post(self, request: Request, *args, **kwargs) -> Response:
         """Обрабатывает POST-запрос для частичного обновления оценки в подписке.
