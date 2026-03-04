@@ -499,7 +499,7 @@ class RatingView(APIView):
             В текущей реализации метод временно возвращает заглушку, так как функционал
         ещё не реализован."""
 
-        coach_id = kwargs["coach_id"]
+        coach = kwargs["coach_id"]
 
         try:
             coach = User.objects.annotate(
@@ -508,7 +508,7 @@ class RatingView(APIView):
                     filter=Q(runs__status=Run.RUN_STATUS_FINISHED),
                 ),
                 rating=Avg("subscribers__rating"),
-            ).get(id=coach_id, is_staff=True)
+            ).get(id=coach, is_staff=True)
         except User.DoesNotExist:
             return Response(
                 {"message": "Тренер с таким id не существует"},
@@ -528,16 +528,16 @@ class RatingView(APIView):
         При успешной валидации данных обновляет оценку (и другие поля, если переданы)
         через сериализатор и возвращает обновлённые данные."""
 
-        coach_id = kwargs["coach_id"]
-        athlete_id = request.data.get("athlete")
+        coach = kwargs["coach_id"]
+        athlete = request.data.get("athlete")
 
         try:
-            coach = User.objects.get(id=coach_id)
+            coach = User.objects.get(id=coach)
         except User.DoesNotExist:
             return Response({"message": "Тренер с таким id не существует"})
 
         try:
-            athlete = User.objects.get(id=athlete_id)
+            athlete = User.objects.get(id=athlete)
         except User.DoesNotExist:
             return Response(
                 {"message": "Атлет с таким id не существует"},
