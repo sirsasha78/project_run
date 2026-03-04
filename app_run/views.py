@@ -108,13 +108,11 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
         User.objects.all()
         .exclude(is_superuser=True)
         .annotate(
-            count_run=Count(
-                "runs",
-                filter=Q(runs__status=Run.RUN_STATUS_FINISHED),
-                rating=Avg("subscribers__rating"),
-            )
+            count_run=Count("runs", filter=Q(runs__status=Run.RUN_STATUS_FINISHED)),
+            rating=Avg("subscribers__rating"),
         )
     )
+
     serializer_class = UserSerializer
     pagination_class = CustomPagination
     filter_backends = [SearchFilter, OrderingFilter]
