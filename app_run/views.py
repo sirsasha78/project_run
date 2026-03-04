@@ -499,9 +499,24 @@ class RatingView(APIView):
             В текущей реализации метод временно возвращает заглушку, так как функционал
         ещё не реализован."""
 
-        return Response(
-            {"message": "GET not implemented yet"}, status=status.HTTP_200_OK
-        )
+        coach_id = kwargs["coach_id"]
+
+        try:
+            coach = User.objects.annotate(
+                count_run=Count(
+                    "runs",
+                    filter=Q(runs__status=Run.RUN_STATUS_FINISHED),
+                ),
+                rating=Avg("subscribers__rating"),
+            ).get(id=coach_id, is_staff=True)
+        except User.DoesNotExist:
+            return Response(
+                {"message": "Тренер с таким id не существует"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = DetailCoachSerializer(coach)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request: Request, *args, **kwargs) -> Response:
         """Обрабатывает POST-запрос для частичного обновления оценки в подписке.
