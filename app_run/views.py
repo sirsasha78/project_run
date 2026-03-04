@@ -10,6 +10,7 @@ from django.contrib.auth.models import User
 from django.db.models import QuerySet, Count, Q, Avg
 from django.conf import settings
 from collections import defaultdict
+from django.http import Http404
 
 from app_run.models import Run, AthleteInfo, Challenge, Position, Subscribe
 from app_run.serializers import (
@@ -509,10 +510,7 @@ class RatingView(APIView):
                 rating=Avg("subscribers__rating"),
             ).get(id=coach_id)
         except User.DoesNotExist:
-            return Response(
-                {"message": "Тренер с таким id не существует"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            raise Http404("Тренер с таким id не существует")
         return coach
 
     def get(self, request: Request, *args, **kwargs) -> Response:
@@ -551,7 +549,7 @@ class RatingView(APIView):
 
         try:
             subscribe = Subscribe.objects.get(
-                athlete=athlete.pk, coach=coach.pk, is_subscribed=True
+                athlete=athlete, coach=coach, is_subscribed=True
             )
         except Subscribe.DoesNotExist:
             return Response(
