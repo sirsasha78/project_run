@@ -1,4 +1,3 @@
-from encodings.punycode import T
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -167,7 +166,7 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
             ),
             rating=Avg("subscribers__rating"),
         )
-        print(users.query)
+
         users_type = self.request.query_params.get("type", None)
         if users_type == "coach":
             return users.filter(is_staff=True)
@@ -477,9 +476,15 @@ class ChallengesSummaryView(APIView):
 
 class RatingView(APIView):
     """Представление для обновления оценки тренера со стороны атлета.
-    Позволяет атлету изменить свою оценку (рейтинг) тренера в рамках существующей подписки.
-    Доступно только для авторизованных пользователей. Проверяет существование тренера,
-    атлета и активной подписки перед обновлением данных.
+    Позволяет авторизованному атлету изменить свою оценку (рейтинг) тренера
+    в рамках существующей активной подписки. Представление проверяет:
+    - существование пользователя-тренера с указанным ID;
+    - является ли он тренером (is_staff=True);
+    - существование пользователя-атлета;
+    - наличие активной подписки между атлетом и тренером.
+    Поддерживает GET- и POST-запросы:
+    - GET: возвращает детальную информацию о тренере, включая средний рейтинг и количество завершённых тренировок.
+    - POST: позволяет частично обновить оценку в подписке.
     Атрибуты:
         serializer_class (type): Класс сериализатора, используемый для валидации
                                  и обновления данных подписки. В данном случае —
@@ -487,31 +492,39 @@ class RatingView(APIView):
 
     serializer_class = SubscribeSerializer
 
-    def get(self, request: Request, *args, **kwargs) -> Response:
-        coach = kwargs["coach_id"]
-        athlete = request.data.get("athlete")
+    def get_object(self, coach_id: int) -> Response | User:
+        """Возвращает объект тренера по его ID или ответ с ошибкой 404.
+        Метод извлекает пользователя по `coach_id` и аннотирует его данными:
+        - count_run — количество завершённых тренировок;
+        - rating — средний рейтинг от подписчиков.
+        Если пользователь с таким ID не найден, возвращается объект Response
+        с сообщением об ошибке и статусом 404."""
 
         try:
-            coach = User.objects.get(id=coach)
+            coach = User.objects.annotate(
+                count_run=Count(
+                    "runs",
+                    filter=Q(runs__status=Run.RUN_STATUS_FINISHED),
+                ),
+                rating=Avg("subscribers__rating"),
+            ).get(id=coach_id)
         except User.DoesNotExist:
             return Response(
                 {"message": "Тренер с таким id не существует"},
                 status=status.HTTP_404_NOT_FOUND,
             )
+        return coach
 
-        subscribe = Subscribe.objects.filter(
-            athlete=athlete, coach=coach, is_subscribed=True
-        ).first()
+    def get(self, request: Request, *args, **kwargs) -> Response:
+        """Обрабатывает GET-запрос для получения информации о тренере.
+        Извлекает ID тренера из URL-параметров, получает объект тренера
+        через метод `get_object`, сериализует его с помощью `DetailCoachSerializer`
+        и возвращает данные в формате JSON со статусом 200."""
 
-        if subscribe:
-            return Response(
-                {"rating": subscribe.rating, "is_subscribed": True},
-                status=status.HTTP_200_OK,
-            )
-        else:
-            return Response(
-                {"rating": None, "is_subscribed": False}, status=status.HTTP_200_OK
-            )
+        coach_id = kwargs["coach_id"]
+        coach = self.get_object(coach_id)
+        serializer = DetailCoachSerializer(coach)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request: Request, *args, **kwargs) -> Response:
         """Обрабатывает POST-запрос для частичного обновления оценки в подписке.
@@ -526,13 +539,7 @@ class RatingView(APIView):
         coach_id = kwargs["coach_id"]
         athlete_id = request.data.get("athlete")
 
-        try:
-            coach = User.objects.get(id=coach_id)
-        except User.DoesNotExist:
-            return Response(
-                {"message": "Тренер с таким id не существует"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+        coach = self.get_object(coach_id)
 
         try:
             athlete = User.objects.get(id=athlete_id)
@@ -544,7 +551,7 @@ class RatingView(APIView):
 
         try:
             subscribe = Subscribe.objects.get(
-                athlete=athlete, coach=coach, is_subscribed=True
+                athlete=athlete.pk, coach=coach.pk, is_subscribed=True
             )
         except Subscribe.DoesNotExist:
             return Response(
