@@ -491,36 +491,17 @@ class RatingView(APIView):
 
     serializer_class = SubscribeSerializer
 
-    def get_object(self, coach_id: int) -> Response | User:
-        """Возвращает объект тренера по его ID или ответ с ошибкой 404.
-        Метод извлекает пользователя по `coach_id` и аннотирует его данными:
-        - count_run — количество завершённых тренировок;
-        - rating — средний рейтинг от подписчиков.
-        Если пользователь с таким ID не найден, возвращается объект Response
-        с сообщением об ошибке и статусом 404."""
-
-        try:
-            coach = User.objects.annotate(
-                count_run=Count(
-                    "runs",
-                    filter=Q(runs__status=Run.RUN_STATUS_FINISHED),
-                ),
-                rating=Avg("subscribers__rating"),
-            ).get(id=coach_id)
-        except User.DoesNotExist:
-            raise Http404("Тренер с таким id не существует")
-        return coach
-
     def get(self, request: Request, *args, **kwargs) -> Response:
         """Обрабатывает GET-запрос для получения информации о тренере.
-        Извлекает ID тренера из URL-параметров, получает объект тренера
-        через метод `get_object`, сериализует его с помощью `DetailCoachSerializer`
-        и возвращает данные в формате JSON со статусом 200."""
+            Извлекает ID тренера из URL-параметров, получает объект тренера
+            через метод `get_object`, сериализует его с помощью `DetailCoachSerializer`
+            и возвращает данные в формате JSON со статусом 200.
+            В текущей реализации метод временно возвращает заглушку, так как функционал
+        ещё не реализован."""
 
-        coach_id = kwargs["coach_id"]
-        coach = self.get_object(coach_id)
-        serializer = DetailCoachSerializer(coach)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(
+            {"message": "GET not implemented yet"}, status=status.HTTP_200_OK
+        )
 
     def post(self, request: Request, *args, **kwargs) -> Response:
         """Обрабатывает POST-запрос для частичного обновления оценки в подписке.
@@ -535,7 +516,10 @@ class RatingView(APIView):
         coach_id = kwargs["coach_id"]
         athlete_id = request.data.get("athlete")
 
-        coach = self.get_object(coach_id)
+        try:
+            coach = User.objects.get(id=coach_id)
+        except User.DoesNotExist:
+            return Response({"message": "Тренер с таким id не существует"})
 
         try:
             athlete = User.objects.get(id=athlete_id)
