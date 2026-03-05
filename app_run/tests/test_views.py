@@ -1,3 +1,4 @@
+from urllib import response
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth.models import User
@@ -163,3 +164,117 @@ class ChallengesSummaryViewTests(TestCase):
             response.data[1]["name_to_display"], "2 километра за 10 минут!"
         )
         self.assertEqual(len(response.data[0]["athletes"]), 2)
+
+
+class UserListViewTests(TestCase):
+    """Набор тестов для проверки представлений списка и детальной информации пользователей.
+    Тесты охватывают:
+    - Получение списка всех пользователей.
+    - Получение детальной информации об атлете.
+    - Получение детальной информации о тренере.
+    Атрибуты:
+        client (APIClient): Клиент для выполнения HTTP-запросов.
+        athlete (User): Пользователь с правами атлета (is_staff=False).
+        coach (User): Пользователь с правами тренера (is_staff=True)."""
+
+    def setUp(self):
+        """Инициализация тестовых данных перед каждым тестом.
+        Создаёт:
+            - Экземпляр APIClient для отправки запросов.
+            - Пользователя-атлета с именем "Петр".
+            - Пользователя-тренера с именем "Иван"."""
+
+        self.client = APIClient()
+        self.athlete = User.objects.create_user(
+            username="Петр", password="123456", is_staff=False
+        )
+        self.coach = User.objects.create_user(
+            username="Иван", password="123456", is_staff=True
+        )
+
+    def test_get_list(self):
+        """Проверяет, что эндпоинт получения списка пользователей работает корректно.
+        Ожидаемое поведение:
+            - Возвращается статус 200 OK.
+            - В ответе содержатся данные обоих созданных пользователей (длина списка — 2).
+        """
+
+        url = reverse("user-list")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+
+    def test_get_detail_athlete(self):
+        """Проверяет получение детальной информации об атлете.
+        Ожидаемое поведение:
+            - Возвращается статус 200 OK.
+            - Имя пользователя в ответе — "Петр".
+            - Тип пользователя определяется как "athlete"."""
+
+        url = reverse("user-detail", kwargs={"pk": self.athlete.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["username"], "Петр")
+        self.assertEqual(response.data["type"], "athlete")
+        self.assertEqual(response.data["runs_finished"], 0)
+        self.assertEqual(response.data["rating"], None)
+
+    def test_get_detail_coach(self):
+        """Проверяет получение детальной информации о тренере.
+        Ожидаемое поведение:
+            - Возвращается статус 200 OK.
+            - Имя пользователя в ответе — "Иван".
+            - Тип пользователя определяется как "coach"."""
+
+        url = reverse("user-detail", kwargs={"pk": self.coach.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["username"], "Иван")
+        self.assertEqual(response.data["type"], "coach")
+
+    def test_superuser_not_included_in_list(self):
+        """Проверяет, что суперпользователь не включён в список пользователей.
+        Ожидаемое поведение:
+            - Созданный суперпользователь отсутствует в данных ответа при запросе списка пользователей.
+        Тест создаёт суперпользователя с заданными учётными данными,
+        затем выполняет GET-запрос к эндпоинту 'user-list'. Убеждается,
+        что объект суперпользователя не присутствует среди данных ответа."""
+
+        superuser = User.objects.create_superuser(
+            username="admin", email="admin@mail.ru", password="123456"
+        )
+        url = reverse("user-list")
+        response = self.client.get(url)
+        self.assertNotIn(superuser, response.data)
+
+    def test_filter_users_by_type_athlete(self):
+        """Проверяет фильтрацию пользователей по типу 'athlete'.
+        Ожидаемое поведение:
+            - Возвращается статус 200 OK.
+            - В ответе содержится ровно один пользователь.
+            - Имя этого пользователя — "Петр".
+        Тест отправляет GET-запрос к эндпоинту 'user-list' с параметром фильтрации '?type=athlete'.
+        Проверяет, что в ответе содержится только один пользователь указанного типа
+        и его имя соответствует ожидаемому."""
+
+        url = reverse("user-list") + "?type=athlete"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["username"], "Петр")
+
+    def test_filter_users_by_type_coach(self):
+        """Проверяет фильтрацию пользователей по типу 'coach'.
+        Ожидаемое поведение:
+            - Возвращается статус 200 OK.
+            - В ответе содержится ровно один пользователь.
+            - Имя этого пользователя — "Иван".
+        Тест отправляет GET-запрос к эндпоинту 'user-list' с параметром фильтрации '?type=coach'.
+        Проверяет, что в ответе содержится только один пользователь указанного типа
+        и его имя соответствует ожидаемому."""
+
+        url = reverse("user-list") + "?type=coach"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["username"], "Иван")
