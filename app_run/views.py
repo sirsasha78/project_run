@@ -548,7 +548,8 @@ class RatingView(APIView):
             subscribe = Subscribe.objects.get(athlete=athlete, coach=coach)
         except Subscribe.DoesNotExist:
             return Response(
-                {"message": "Подписки не существует"}, status=status.HTTP_404_NOT_FOUND
+                {"message": "Подписки не существует"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         serializer = self.serializer_class(subscribe, data=request.data, partial=True)
