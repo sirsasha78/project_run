@@ -534,7 +534,10 @@ class RatingView(APIView):
         try:
             coach = User.objects.get(id=coach)
         except User.DoesNotExist:
-            return Response({"message": "Тренер с таким id не существует"})
+            return Response(
+                {"message": "Тренер с таким id не существует"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
         try:
             athlete = User.objects.get(id=athlete)
