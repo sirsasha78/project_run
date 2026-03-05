@@ -356,8 +356,13 @@ class SubscribeSerializer(serializers.ModelSerializer):
         активной подписки между теми же пользователями.
         """
 
-        athlete = attrs["athlete"]
-        coach = attrs["coach"]
+        athlete = attrs.get("athlete", self.instance.athlete if self.instance else None)
+        coach = attrs.get("coach", self.instance.coach if self.instance else None)
+
+        if not athlete:
+            raise serializers.ValidationError("Поле athlete обязательное")
+        if not coach:
+            raise serializers.ValidationError("Поле coach обязательное")
 
         if athlete == coach:
             raise serializers.ValidationError("Нельзя подписаться на себя.")
