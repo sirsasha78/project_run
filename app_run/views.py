@@ -544,7 +544,7 @@ class RatingView(APIView):
         except User.DoesNotExist:
             return Response(
                 {"message": "Атлет с таким id не существует"},
-                status=status.HTTP_404_NOT_FOUND,
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
