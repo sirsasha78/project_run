@@ -278,3 +278,76 @@ class UserListViewTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["username"], "Иван")
+
+
+class StartViewTests(TestCase):
+    """Набор тестов для проверки функциональности запуска забега через представление `start-run`.
+    Тесты охватывают различные сценарии:
+    - Успешный старт забега
+    - Попытка начать уже запущенный забег
+    - Попытка начать завершённый забег
+    - Попытка начать несуществующий забег
+    Атрибуты:
+        client (APIClient): Клиент для выполнения HTTP-запросов.
+        athlete (User): Пользователь (спортсмен), создаётся для тестов.
+        test_run (Run): Объект забега, связанный со спортсменом."""
+
+    def setUp(self):
+        """Инициализация тестовых данных перед каждым тестом.
+        Создаёт:
+            - Экземпляр APIClient для имитации запросов.
+            - Пользователя с именем "Петр" и паролем "123456".
+            - Забег, привязанный к этому пользователю."""
+
+        self.client = APIClient()
+        self.athlete = User.objects.create_user(username="Петр", password="123456")
+        self.test_run = Run.objects.create(athlete=self.athlete)
+
+    def test_start_run_success(self):
+        """Проверяет успешный запуск забега.
+        Отправляет POST-запрос на URL `start-run` с идентификатором забега.
+        Ожидается:
+            - Статус ответа 200 OK.
+            - Сообщение в теле ответа: "Забег начат".
+            - Статус забега в базе данных изменяется на "в процессе"."""
+
+        url = reverse("start-run", kwargs={"run_id": self.test_run.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["status"], "Забег начат")
+        self.test_run.refresh_from_db()
+        self.assertEqual(self.test_run.status, Run.RUN_STATUS_IN_PROGRESS)
+
+    def test_start_run_already_started(self):
+        """Проверяет реакцию на попытку запуска уже начатого забега.
+        Предусловие: статус забега установлен в "в процессе".
+        Ожидается:
+            - Статус ответа 400 Bad Request."""
+
+        self.test_run.status = Run.RUN_STATUS_IN_PROGRESS
+        self.test_run.save()
+        url = reverse("start-run", kwargs={"run_id": self.test_run.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_start_run_already_finished(self):
+        """Проверяет реакцию на попытку запуска завершённого забега.
+        Предусловие: статус забега установлен в "завершён".
+        Ожидается:
+            - Статус ответа 400 Bad Request."""
+
+        self.test_run.status = Run.RUN_STATUS_FINISHED
+        self.test_run.save()
+        url = reverse("start-run", kwargs={"run_id": self.test_run.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_start_run_not_found(self):
+        """Проверяет реакцию на попытку запуска несуществующего забега.
+        Используется несуществующий идентификатор (4).
+        Ожидается:
+            - Статус ответа 404 Not Found."""
+
+        url = reverse("start-run", kwargs={"run_id": 4})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
