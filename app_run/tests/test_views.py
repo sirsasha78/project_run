@@ -1,11 +1,11 @@
-from urllib import response
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth.models import User
+from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework import status
 
-from app_run.models import Run, Challenge
+from app_run.models import Run, Challenge, Position
 
 
 class RunListViewTests(TestCase):
@@ -351,3 +351,83 @@ class StartViewTests(TestCase):
         url = reverse("start-run", kwargs={"run_id": 4})
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class FinishViewTests(TestCase):
+
+    def setUp(self):
+        self.client = APIClient()
+        self.athlete = User.objects.create_user(username="Петр", password="123456")
+        self.test_run = Run.objects.create(
+            athlete=self.athlete, status=Run.RUN_STATUS_IN_PROGRESS
+        )
+
+    def test_finished_run_success(self):
+        url = reverse("stop-run", kwargs={"run_id": self.test_run.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["status"], "Забег закончен")
+        self.test_run.refresh_from_db()
+        self.assertEqual(self.test_run.status, Run.RUN_STATUS_FINISHED)
+
+    def test_finished_run_already_init(self):
+        self.test_run.status = Run.RUN_STATUS_INIT
+        self.test_run.save()
+        url = reverse("stop-run", kwargs={"run_id": self.test_run.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_finished_already_finished(self):
+        self.test_run.status = Run.RUN_STATUS_FINISHED
+        self.test_run.save()
+        url = reverse("stop-run", kwargs={"run_id": self.test_run.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_finished_run_not_found(self):
+        url = reverse("stop-run", kwargs={"run_id": 4})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_run_distance_is_calculated_on_finish(self):
+        now = timezone.now()
+        Position.objects.create(
+            run=self.test_run,
+            latitude=55.7558,
+            longitude=37.6176,
+            date_time=now - timezone.timedelta(minutes=10),
+        )
+        Position.objects.create(
+            run=self.test_run, latitude=55.7568, longitude=37.6176, date_time=now
+        )
+        url = reverse("stop-run", kwargs={"run_id": self.test_run.pk})
+        self.client.post(url)
+        self.test_run.refresh_from_db()
+        self.assertGreater(self.test_run.distance, 0)
+
+    def test_run_time_seconds_is_calculated_on_finish(self):
+        now = timezone.now()
+        Position.objects.create(
+            run=self.test_run,
+            latitude=55.7558,
+            longitude=37.6176,
+            date_time=now - timezone.timedelta(minutes=10),
+        )
+        Position.objects.create(
+            run=self.test_run, latitude=55.7568, longitude=37.6176, date_time=now
+        )
+        url = reverse("stop-run", kwargs={"run_id": self.test_run.pk})
+        self.client.post(url)
+        self.test_run.refresh_from_db()
+        self.assertGreater(self.test_run.run_time_seconds, 500)
+
+    def test_create_challenge_ten_runs_on_10th_finished_run(self):
+        for _ in range(9):
+            Run.objects.create(athlete=self.athlete, status=Run.RUN_STATUS_FINISHED)
+
+        url = reverse("stop-run", kwargs={"run_id": self.test_run.pk})
+        self.client.post(url)
+        challenge_exists = Challenge.objects.filter(
+            full_name="Сделай 10 Забегов!", athlete=self.athlete
+        ).exists()
+        self.assertTrue(challenge_exists)

@@ -296,11 +296,13 @@ class SubscribeModelTests(TestCase):
         Убеждается, что поля объекта подписки соответствуют ожидаемым значениям:
         - Имя атлета — "Петр".
         - Имя тренера — "Василий".
-        - Статус подписки (is_subscribed) — False (по умолчанию)."""
+        - Статус подписки (is_subscribed) — False (по умолчанию)
+        - Рэйтинг (rating) - None (по умолчанию)."""
 
         self.assertEqual(self.subscribe.athlete.username, "Петр")
         self.assertEqual(self.subscribe.coach.username, "Василий")
         self.assertEqual(self.subscribe.is_subscribed, False)
+        self.assertEqual(self.subscribe.rating, None)
 
     def test_unique_constraint(self):
         """Проверяет, что нельзя подписаться дважды на одного тренера."""
