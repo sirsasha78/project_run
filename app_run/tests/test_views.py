@@ -354,8 +354,21 @@ class StartViewTests(TestCase):
 
 
 class FinishViewTests(TestCase):
+    """Набор тестов для проверки функциональности завершения забега через представление `stop-run`.
+    Тесты охватывают различные сценарии:
+    - Успешное завершение забега.
+    - Попытку завершить забег в недопустимых состояниях (например, инициализирован или уже завершён).
+    - Обработку несуществующего забега.
+    - Расчёт дистанции и времени забега при завершении.
+    - Создание испытания после 10-го завершённого забега."""
 
     def setUp(self):
+        """Подготовка данных перед выполнением каждого теста.
+        Создаёт:
+        - Экземпляр клиента API.
+        - Пользователя-спортсмена с именем "Петр".
+        - Забег со статусом "в процессе" для этого спортсмена."""
+
         self.client = APIClient()
         self.athlete = User.objects.create_user(username="Петр", password="123456")
         self.test_run = Run.objects.create(
@@ -363,6 +376,12 @@ class FinishViewTests(TestCase):
         )
 
     def test_finished_run_success(self):
+        """Проверяет успешное завершение забега.
+        Отправляет POST-запрос на завершение забега и проверяет:
+        - Код ответа 200 OK.
+        - Сообщение в ответе: "Забег закончен".
+        - Статус забега в базе данных изменён на "завершён"."""
+
         url = reverse("stop-run", kwargs={"run_id": self.test_run.pk})
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -371,6 +390,10 @@ class FinishViewTests(TestCase):
         self.assertEqual(self.test_run.status, Run.RUN_STATUS_FINISHED)
 
     def test_finished_run_already_init(self):
+        """Проверяет, что нельзя завершить забег со статусом "инициализирован".
+        Изменяет статус забега на INIT, отправляет запрос на завершение и проверяет:
+        - Код ответа 400 Bad Request."""
+
         self.test_run.status = Run.RUN_STATUS_INIT
         self.test_run.save()
         url = reverse("stop-run", kwargs={"run_id": self.test_run.pk})
@@ -378,6 +401,10 @@ class FinishViewTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_finished_already_finished(self):
+        """Проверяет, что нельзя повторно завершить уже завершённый забег.
+        Устанавливает статус забега как "завершён", отправляет запрос и проверяет:
+        - Код ответа 400 Bad Request."""
+
         self.test_run.status = Run.RUN_STATUS_FINISHED
         self.test_run.save()
         url = reverse("stop-run", kwargs={"run_id": self.test_run.pk})
@@ -385,11 +412,19 @@ class FinishViewTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_finished_run_not_found(self):
+        """Проверяет обработку запроса на завершение несуществующего забега.
+        Отправляет запрос с несуществующим ID и проверяет:
+        - Код ответа 404 Not Found."""
+
         url = reverse("stop-run", kwargs={"run_id": 4})
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_run_distance_is_calculated_on_finish(self):
+        """Проверяет, что дистанция забега корректно рассчитывается при завершении.
+        Добавляет две позиции с координатами и временной разницей,
+        завершает забег и проверяет, что поле distance больше нуля."""
+
         now = timezone.now()
         Position.objects.create(
             run=self.test_run,
@@ -406,6 +441,10 @@ class FinishViewTests(TestCase):
         self.assertGreater(self.test_run.distance, 0)
 
     def test_run_time_seconds_is_calculated_on_finish(self):
+        """Проверяет, что продолжительность забега в секундах корректно рассчитывается при завершении.
+        Добавляет две позиции с интервалом в 10 минут, завершает забег и проверяет:
+        - Время забега больше 500 секунд."""
+
         now = timezone.now()
         Position.objects.create(
             run=self.test_run,
@@ -422,6 +461,10 @@ class FinishViewTests(TestCase):
         self.assertGreater(self.test_run.run_time_seconds, 500)
 
     def test_create_challenge_ten_runs_on_10th_finished_run(self):
+        """Проверяет создание испытания 'Сделай 10 Забегов!' после 10-го завершённого забега.
+        Создаёт 9 завершённых забегов, затем завершает 10-й (test_run),
+        после чего проверяет наличие соответствующего испытания в базе данных."""
+
         for _ in range(9):
             Run.objects.create(athlete=self.athlete, status=Run.RUN_STATUS_FINISHED)
 

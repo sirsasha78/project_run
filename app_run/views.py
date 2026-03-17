@@ -7,10 +7,9 @@ from rest_framework.views import APIView
 from rest_framework import viewsets
 from rest_framework import status
 from django.contrib.auth.models import User
-from django.db.models import QuerySet, Count, Q, Avg
+from django.db.models import QuerySet, Count, Q, Avg, Max, Sum
 from django.conf import settings
 from collections import defaultdict
-from django.http import Http404
 
 from app_run.models import Run, AthleteInfo, Challenge, Position, Subscribe
 from app_run.serializers import (
@@ -23,6 +22,7 @@ from app_run.serializers import (
     DetailAthleteSerializer,
     DetailCoachSerializer,
     ChallengesSummarySerializer,
+    AnalyticsSerializer,
 )
 from app_run.paginations import CustomPagination
 from app_run.utils import (
@@ -561,3 +561,60 @@ class RatingView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AnalyticsForCoachView(APIView):
+    """Представление для получения аналитики по тренировкам спортсменов, связанных с тренером.
+    Предоставляет данные о самом длинном забеге, суммарной дистанции и средней скорости
+    среди всех спортсменов, подписанных на указанного тренера."""
+
+    serializer_class = AnalyticsSerializer
+
+    def get(self, request: Request, *args, **kwargs) -> Response:
+        """Обрабатывает GET-запрос для получения аналитических данных по тренеру.
+        Получает информацию о тренере по `coach_id`, затем анализирует завершённые
+        тренировки его спортсменов, чтобы определить:
+        - Спортсмена с самым длинным забегом
+        - Спортсмена с наибольшей суммарной дистанцией
+        - Спортсмена с наибольшей средней скоростью"""
+
+        try:
+            coach = User.objects.annotate(
+                count_run=Count("runs", filter=Q(runs__status=Run.RUN_STATUS_FINISHED)),
+                rating=Avg("subscribers__rating"),
+            ).get(id=kwargs["coach_id"])
+        except User.DoesNotExist:
+            return Response(
+                {"message": "Тренер с таким ID не существует"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = DetailCoachSerializer(coach)
+        data = serializer.data
+        athletes_id = data["athletes"]
+
+        result = (
+            Run.objects.values("athlete")
+            .annotate(
+                max_value=Max("distance"),
+                total_run=Sum("distance"),
+                speed_avg=Avg("speed"),
+            )
+            .filter(athlete__in=athletes_id, status=Run.RUN_STATUS_FINISHED)
+        )
+
+        longest_run = max(result, key=lambda x: x["max_value"])
+        sum_distance = max(result, key=lambda x: x["total_run"])
+        avg_speed = max(result, key=lambda x: x["speed_avg"])
+
+        data_analytics = {
+            "longest_run_user": longest_run["athlete"],
+            "longest_run_value": longest_run["max_value"],
+            "total_run_user": sum_distance["athlete"],
+            "total_run_value": sum_distance["total_run"],
+            "speed_avg_user": avg_speed["athlete"],
+            "speed_avg_value": avg_speed["speed_avg"],
+        }
+
+        serializer = AnalyticsSerializer(data_analytics)
+        return Response(serializer.data, status=status.HTTP_200_OK)

@@ -378,3 +378,18 @@ class SubscribeSerializer(serializers.ModelSerializer):
         if subscribe and self.instance != subscribe:
             raise serializers.ValidationError("Подписка уже существует.")
         return attrs
+
+
+class AnalyticsSerializer(serializers.Serializer):
+    """Сериализатор для представления аналитических данных о беге пользователей.
+    Данный сериализатор используется для преобразования сложных данных, связанных с
+    аналитикой активности пользователей (например, в системе отслеживания физической активности),
+    в формат, пригодный для передачи по API (например, JSON). Он содержит поля, описывающие
+    лучшие и средние показатели пользователей по различным метрикам."""
+
+    longest_run_user = serializers.IntegerField()
+    longest_run_value = serializers.FloatField()
+    total_run_user = serializers.IntegerField()
+    total_run_value = serializers.FloatField()
+    speed_avg_user = serializers.IntegerField()
+    speed_avg_value = serializers.FloatField()
