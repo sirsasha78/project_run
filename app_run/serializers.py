@@ -387,9 +387,9 @@ class AnalyticsSerializer(serializers.Serializer):
     в формат, пригодный для передачи по API (например, JSON). Он содержит поля, описывающие
     лучшие и средние показатели пользователей по различным метрикам."""
 
-    longest_run_user = serializers.IntegerField(required=False, allow_null=True)
+    longest_run_user = serializers.IntegerField(allow_null=True)
     longest_run_value = serializers.FloatField()
-    total_run_user = serializers.IntegerField(required=False, allow_null=True)
+    total_run_user = serializers.IntegerField(allow_null=True)
     total_run_value = serializers.FloatField()
-    speed_avg_user = serializers.IntegerField(required=False, allow_null=True)
+    speed_avg_user = serializers.IntegerField(allow_null=True)
     speed_avg_value = serializers.FloatField()
