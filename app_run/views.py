@@ -619,16 +619,13 @@ class AnalyticsForCoachView(APIView):
             }
         else:
             data_analytics = {
-                "longest_run_user": None,
+                "longest_run_user": 0,
                 "longest_run_value": 0.0,
-                "total_run_user": None,
+                "total_run_user": 0,
                 "total_run_value": 0.0,
-                "speed_avg_user": None,
+                "speed_avg_user": 0,
                 "speed_avg_value": 0.0,
             }
 
-        serializer = self.serializer_class(data=data_analytics)
-        if serializer.is_valid(raise_exception=True):
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.serializer_class(data_analytics)
+        return Response(serializer.data, status=status.HTTP_200_OK)
