@@ -602,19 +602,28 @@ class AnalyticsForCoachView(APIView):
             )
             .filter(athlete__in=athletes_id, status=Run.RUN_STATUS_FINISHED)
         )
+        if result:
+            longest_run = max(result, key=lambda x: x["max_value"])
+            sum_distance = max(result, key=lambda x: x["total_run"])
+            avg_speed = max(result, key=lambda x: x["speed_avg"])
 
-        longest_run = max(result, key=lambda x: x["max_value"])
-        sum_distance = max(result, key=lambda x: x["total_run"])
-        avg_speed = max(result, key=lambda x: x["speed_avg"])
-
-        data_analytics = {
-            "longest_run_user": longest_run["athlete"],
-            "longest_run_value": longest_run["max_value"],
-            "total_run_user": sum_distance["athlete"],
-            "total_run_value": sum_distance["total_run"],
-            "speed_avg_user": avg_speed["athlete"],
-            "speed_avg_value": avg_speed["speed_avg"],
-        }
+            data_analytics = {
+                "longest_run_user": longest_run["athlete"],
+                "longest_run_value": longest_run["max_value"],
+                "total_run_user": sum_distance["athlete"],
+                "total_run_value": sum_distance["total_run"],
+                "speed_avg_user": avg_speed["athlete"],
+                "speed_avg_value": avg_speed["speed_avg"],
+            }
+        else:
+            data_analytics = {
+                "longest_run_user": None,
+                "longest_run_value": 0.0,
+                "total_run_user": None,
+                "total_run_value": 0.0,
+                "speed_avg_user": None,
+                "speed_avg_value": 0.0,
+            }
 
         serializer = AnalyticsSerializer(data_analytics)
         return Response(serializer.data, status=status.HTTP_200_OK)
