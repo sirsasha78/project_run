@@ -590,9 +590,7 @@ class AnalyticsForCoachView(APIView):
             )
 
         athletes_id = list(
-            Subscribe.objects.filter(coach=coach, is_subscribed=True).values_list(
-                "athlete__id", flat=True
-            )
+            Subscribe.objects.filter(coach=coach).values_list("athlete__id", flat=True)
         )
 
         result = (
