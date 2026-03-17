@@ -589,9 +589,11 @@ class AnalyticsForCoachView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        serializer = DetailCoachSerializer(coach)
-        data = serializer.data
-        athletes_id = data["athletes"]
+        athletes_id = list(
+            Subscribe.objects.filter(coach=coach, is_subscribed=True).values_list(
+                "athlete__id", flat=True
+            )
+        )
 
         result = (
             Run.objects.values("athlete")
