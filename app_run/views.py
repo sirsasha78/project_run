@@ -625,7 +625,7 @@ class AnalyticsForCoachView(APIView):
                 "speed_avg_value": 0.0,
             }
 
-        serializer = AnalyticsSerializer(data_analytics)
+        serializer = self.serializer_class(data=data_analytics)
         if serializer.is_valid(raise_exception=True):
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
